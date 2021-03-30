@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Math.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="OpencvPractice.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+    <ClCompile Include="Machine.cpp">
+      <Filter>소스 파일</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Machine.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="OpencvPractice.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="Math.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Resources">
+      <UniqueIdentifier>{203242d8-24b2-456e-ad36-d2909ae4a95e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Image">
+      <UniqueIdentifier>{c7167a67-b35b-4ab2-a82c-7e7fe71fe120}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resources\Video">
+      <UniqueIdentifier>{330a8e08-497a-4005-b6e0-f68064d081a5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="소스 파일">
+      <UniqueIdentifier>{9c95f6e9-c600-49f2-845e-1616d5389b99}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="헤더 파일">
+      <UniqueIdentifier>{8d0f8b65-bfa4-40ad-aade-f11ce8656eeb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\train-images.idx3-ubyte">
+      <Filter>Resources</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Media Include="Resources\Video\Anime.mp4">
+      <Filter>Resources\Video</Filter>
+    </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Resources\Image\dog.jfif">
+      <Filter>Resources\Image</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
