@@ -34,8 +34,11 @@ public:
 
 	//---------------------------------
 	void FaceScan();
-	void MatPrint(std::vector<cv::Mat>&);
-	void MnistRead(std::string, std::vector<cv::Mat>&, int readNum = -1);
+	void MatPrint(std::vector<cv::Mat>&, std::vector<uint8_t>&);
+	void MnistTrainingDataRead(std::string, std::vector<cv::Mat>&, int readDataNum = -1);
+	void MnistLabelDataRead(std::string, std::vector<uint8_t>&, int readDataNum = -1);
+	int ConvertCVGrayImageType(int mNistMagicNumber);
+
 	int ReverseInt(int);
 
 };

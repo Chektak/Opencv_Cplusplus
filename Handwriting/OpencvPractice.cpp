@@ -242,8 +242,24 @@ void OpencvPractice::FaceScan()
 	cv::destroyAllWindows();
 }
 
+void OpencvPractice::MatPrint(std::vector<cv::Mat>& trainingVec, std::vector<cv::uint8_t>& labelVec)
+{
+	std::cout << "읽어온 훈련 데이터 수 : " << trainingVec.size() << std::endl;
+	std::cout << "읽어온 정답 데이터 수 : " << labelVec.size() << std::endl;
 
-//RGBA int값을 ABGR로 변환함
+	cv::namedWindow("Window", cv::WINDOW_AUTOSIZE);
+
+	for (int i = 0; i < labelVec.size() && i < trainingVec.size(); i++) {
+		imshow("Window", trainingVec[i]);
+		std::cout << i << "번째 이미지 정답 : " << (int)labelVec[i] <<std::endl;
+		//아무 키나 누르면 다음
+		if (cv::waitKey(0) != -1)
+			continue;
+	}
+}
+
+//32bit 정수형을 읽기 위해 리틀 엔디안 CPU에서 재배치하는 함수
+//1바이트(8비트)씩 거꾸로 배열한 int를 반환
 int OpencvPractice::ReverseInt(int i)
 {
 	unsigned char ch1, ch2, ch3, ch4;
@@ -254,25 +270,8 @@ int OpencvPractice::ReverseInt(int i)
 	return((int)ch1 << 24) + ((int)ch2 << 16) + ((int)ch3 << 8) + ch4;
 }
 
-void OpencvPractice::MatPrint(std::vector<cv::Mat>& vec)
-{
-	std::cout << vec.size() << std::endl;
-
-	cv::namedWindow("Window", cv::WINDOW_NORMAL);
-
-	for (int i = 0; i < vec.size(); i++) {
-		//제로패딩 실험
-		/*cv::Mat temp;
-		cv::copyMakeBorder(vec[i], temp, 10, 10, 3, 6, cv::BORDER_CONSTANT, cv::Scalar(255, 255, 255));
-		imshow("Window2", temp);*/
-		
-		imshow("Window", vec[i]);
-		cv::waitKey(100);
-	}
-}
-
-//인자로 받은 vec에 Mnist 데이터 Mat들을 추가한다
-void OpencvPractice::MnistRead(std::string filePath, std::vector<cv::Mat>& vec, int readNum)
+//인자로 받은 vector에 Mnist 훈련 데이터를 파싱해 Matrix으로 저장
+void OpencvPractice::MnistTrainingDataRead(std::string filePath, std::vector<cv::Mat>& vec, int readDataNum)
 {
 	std::ifstream file(filePath, std::ios::binary);
 	if (file.is_open())
@@ -281,6 +280,9 @@ void OpencvPractice::MnistRead(std::string filePath, std::vector<cv::Mat>& vec, 
 		int number_of_images = 0;
 		int n_rows = 0;
 		int n_cols = 0;
+
+		//ifstream::read(str, count)로 count만큼 읽어 str에 저장
+		//char은 1바이트, int는 4바이트이므로 int 1개당 char 4개의 정보만큼 가져옴
 		file.read((char*)&magic_number, sizeof(magic_number));
 		magic_number = ReverseInt(magic_number);
 		file.read((char*)&number_of_images, sizeof(number_of_images));
@@ -289,19 +291,72 @@ void OpencvPractice::MnistRead(std::string filePath, std::vector<cv::Mat>& vec, 
 		n_rows = ReverseInt(n_rows);
 		file.read((char*)&n_cols, sizeof(n_cols));
 		n_cols = ReverseInt(n_cols);
-		for (int i = 0; i < number_of_images; ++i)
+		
+		if (readDataNum > number_of_images || readDataNum <= 0)
+			readDataNum = number_of_images;
+
+		for (int i = 0; i < readDataNum; ++i)
 		{
-			cv::Mat tp = cv::Mat::zeros(n_rows, n_cols, CV_8UC1);
+			cv::Mat tp = cv::Mat::zeros(n_rows, n_cols, ConvertCVGrayImageType(magic_number));
 			for (int r = 0; r < n_rows; ++r)
 			{
 				for (int c = 0; c < n_cols; ++c)
 				{
-					unsigned char temp = 0;
-					file.read((char*)&temp, sizeof(temp));
-					tp.at<uchar>(r, c) = (int)temp;
+					//magicnumber에서 얻은 타입 정보가 unsigned byte 일 경우
+					if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
+						unsigned char temp = 0;
+						file.read((char*)&temp, sizeof(temp));
+						tp.at<uchar>(r, c) = (int)temp;
+					}
 				}
 			}
 			vec.push_back(tp);
 		}
+	}
+}
+
+void OpencvPractice::MnistLabelDataRead(std::string filePath, std::vector<uint8_t>& vec, int readDataNum)
+{
+	std::ifstream file(filePath, std::ios::binary);
+	if (file.is_open())
+	{
+		int magic_number = 0;
+		int number_of_images = 0;
+
+		//ifstream::read(str, count)로 count만큼 읽어 str에 저장
+		//char은 1바이트, int는 4바이트이므로 int 1개당 char 4개의 정보만큼 가져옴
+		file.read((char*)&magic_number, sizeof(magic_number));
+		magic_number = ReverseInt(magic_number);
+		file.read((char*)&number_of_images, sizeof(number_of_images));
+		number_of_images = ReverseInt(number_of_images);
+		if (readDataNum > number_of_images || readDataNum <= 0)
+			readDataNum = number_of_images;
+
+		for (int i = 0; i < readDataNum; ++i)
+		{
+			//magicnumber에서 얻은 타입 정보가 unsigned byte 일 경우
+			if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
+				uint8_t temp = 0;
+				file.read((char*)&temp, sizeof(temp));
+				vec.push_back(temp);
+			}
+		}
+	}
+}
+
+int OpencvPractice::ConvertCVGrayImageType(int magicNumber)
+{
+	magicNumber = (magicNumber >> 8) & 255; //3번째 바이트(픽셀 타입)만 가져오기
+	//리틀 엔디안 CPU에서 magicNumber = ((char*)&magicNumber)[1];와 같음
+	//빅 엔디안 CPU에서 magicNumber = ((char*)&magicNumber)[2];와 같음
+
+	switch (magicNumber) {
+	case 0x08: return CV_8UC1;//unsigned byte, 흑백 채널 단일
+	case 0x09: return CV_8SC1;//signed byte, 흑백 채널 단일
+	case 0x0B: return CV_16SC1;//short(2 바이트), 흑백 채널 단일
+	case 0x0C: return CV_32SC1;//int(4 바이트), 흑백 채널 단일
+	case 0x0D: return CV_32FC1;//float(4 바이트), 흑백 채널 단일
+	case 0x0E: return CV_64FC1;//double(8 바이트), 흑백 채널 단일
+	default: return CV_8UC1;
 	}
 }

@@ -10,11 +10,11 @@ int main() {
 	//op.FaceScan();
 
 	//read MNIST iamge into OpenCV Mat vector
-	/*std::vector<cv::Mat> vec;
-	op.MnistRead("Resources/train-images.idx3-ubyte", vec);
-	std::cout << vec[0].rows << std::endl;
-	std::cout << vec[0].cols << std::endl;
-	op.MatPrint(vec);*/
+	std::vector<cv::Mat> trainingVec;
+	std::vector<uchar> labelVec;
+	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, 10);
+	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, 10);
+	op.MatPrint(trainingVec, labelVec);
 
 	//소프트맥스 함수 테스트
 	//cv::Mat input = cv::Mat_<float>({2, 3}, {1,3,5,7,9,-600});
@@ -41,5 +41,11 @@ int main() {
 	std::cout << "합성곱 연산 후 :\n" << out << std::endl;
 	Math::MaxPooling(out, out, cv::Size(2, 2), cv::Size(2, 2));
 	std::cout << "풀링 연산 후 :\n" << out << std::endl;*/
+
+	//시프트 연산 테스트
+	//std::cout << "10진수 2144444444 = 2진수로 "<<std::bitset<32>(2144444444) << std::endl;
+	//std::cout << "10진수 2144444444를 ReverseInt 2진수로 " <<std::bitset<32>(op.ReverseInt(2144444444)) << std::endl;
+	
+	
 	return 0;
 }
