@@ -247,7 +247,7 @@ void OpencvPractice::MatPrint(std::vector<cv::Mat>& trainingVec, std::vector<cv:
 	std::cout << "읽어온 훈련 데이터 수 : " << trainingVec.size() << std::endl;
 	std::cout << "읽어온 정답 데이터 수 : " << labelVec.size() << std::endl;
 
-	cv::namedWindow("Window", cv::WINDOW_AUTOSIZE);
+	cv::namedWindow("Window", cv::WINDOW_NORMAL);
 
 	for (int i = 0; i < labelVec.size() && i < trainingVec.size(); i++) {
 		imshow("Window", trainingVec[i]);

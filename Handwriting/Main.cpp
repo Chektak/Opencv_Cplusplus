@@ -12,8 +12,8 @@ int main() {
 	//read MNIST iamge into OpenCV Mat vector
 	std::vector<cv::Mat> trainingVec;
 	std::vector<uchar> labelVec;
-	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, 10);
-	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, 10);
+	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
+	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
 	op.MatPrint(trainingVec, labelVec);
 
 	//소프트맥스 함수 테스트
