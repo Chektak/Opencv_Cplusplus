@@ -12,6 +12,7 @@
 
 #include "Math.h" 
 #include "OpencvPractice.h"
+#include "CNNMachine.h"
 
 #define USEDATA_NUM 60000
 #define KERNEL1_NUM 32

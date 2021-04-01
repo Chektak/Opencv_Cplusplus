@@ -145,14 +145,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Machine.cpp" />
+    <ClCompile Include="CNNMachine.cpp" />
     <ClCompile Include="Math.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="OpencvPractice.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h" />
-    <ClInclude Include="Machine.h" />
+    <ClInclude Include="CNNMachine.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="OpencvPractice.h" />
   </ItemGroup>

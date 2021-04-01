@@ -1,6 +1,6 @@
 #include "Math.h"
 
-void Math::CreateZeroPadding(cv::InputArray _Input, cv::OutputArray _Output, const cv::Size& outputSize, const cv::Size& k, const cv::Size& stride)
+void Math::CreateZeroPadding(cv::InputArray _Input, cv::OutputArray _Output, const cv::Size& convResultSize, const cv::Size& k, const cv::Size& stride)
 {
 	cv::Mat input = _Input.getMat();
 	_Input.copyTo(_Output);
@@ -9,9 +9,10 @@ void Math::CreateZeroPadding(cv::InputArray _Input, cv::OutputArray _Output, con
 	double p = 0;
 	int oH = (int)((input.rows + 2 * p - k.height) / stride.height) + 1;
 	int oW = (int)((input.cols + 2 * p - k.width) / stride.width) + 1;
+
 	//제로 패딩 행렬 생성
 	//패딩이 0.5 늘어날 때마다 왼쪽 + 위, 오른쪽 + 아래 순으로 행렬 확장
-	while (oH != outputSize.height) {
+	while (oH != convResultSize.height) {
 		p += 0.5;
 		if (p - (int)p != 0)
 			cv::copyMakeBorder(_Output, _Output, 1, 0, 0, 0, cv::BORDER_CONSTANT, 0);
@@ -21,7 +22,7 @@ void Math::CreateZeroPadding(cv::InputArray _Input, cv::OutputArray _Output, con
 		oH = (int)((input.rows + 2 * p - k.height) / stride.height) + 1;
 	}
 	p = 0;
-	while (oW != outputSize.width) {
+	while (oW != convResultSize.width) {
 		p += 0.5;
 		if (p - (int)p != 0)
 			cv::copyMakeBorder(_Output, _Output, 0, 0, 1, 0, cv::BORDER_CONSTANT, 0);
@@ -32,7 +33,6 @@ void Math::CreateZeroPadding(cv::InputArray _Input, cv::OutputArray _Output, con
 	}
 }
 
-//교차 상관 연산 수행
 void Math::Convolution(cv::InputArray _Input, cv::OutputArray _Output, const cv::Size& outputSize, cv::InputArray k, const cv::Size& stride)
 {
 	cv::Mat kernel = k.getMat();
