@@ -22,48 +22,38 @@ int main() {
 	//std::cout << "신경망 가중치 행렬 :\n" << w << std::endl;
 	//std::cout << "신경망(행렬곱) 연산 후 :\n" <<output << std::endl;
 
+	//시프트 연산 테스트
+	//std::cout << "10진수 2144444444 = 2진수로 "<<std::bitset<32>(2144444444) << std::endl;
+	//std::cout << "10진수 2144444444를 ReverseInt 2진수로 " <<std::bitset<32>(op.ReverseInt(2144444444)) << std::endl;
+	
 	//교차 상관 연산
-	cv::Mat input = cv::Mat_<float>({ 3, 3 }, { 1,2,3,4,5,6,7,8,9 });
+	/*cv::Mat input = cv::Mat_<float>({ 3, 3 }, { 1,2,3,4,5,6,7,8,9 });
 	cv::Mat kernel = cv::Mat_<float>({ 3, 3 }, { 0,1,0,0,1,0,0,1,0 });
 	cv::Mat out;
 	cv::Mat zeroPadding;
+	std::cout << out.type() << std::endl;
+	std::cout << zeroPadding.type() << std::endl;
+	std::cout << input.type() << std::endl;
+	std::cout << kernel.type() << std::endl;
 	std::cout << "입력 데이터 :\n" << input << std::endl;
 	Math::CreateZeroPadding(input, zeroPadding, input.size(), kernel.size(), cv::Size(1, 1));
 	std::cout << "제로 패딩 후 :\n" << zeroPadding << std::endl;
 	Math::Convolution(zeroPadding, out, input.size(), kernel, cv::Size(1, 1));
 	std::cout << "합성곱 연산 후 :\n" << out << std::endl;
 	Math::MaxPooling(out, out, cv::Size(2, 2), cv::Size(2, 2));
-	std::cout << "풀링 연산 후 :\n" << out << std::endl;
-	
-	std::vector<cv::Mat> vec1;
-	vec1.push_back(out);
-	vec1.push_back(out);
-	std::vector<cv::Vec<cv::float16_t, 1>> vec2;
-	for (int i = 0; i < vec1.size(); i++) {
-		vec2.push_back(*vec1[i].data);
-	}
-	
-	std::cout << vec2.size() << std::endl;
-	//std::vector<std::vector<float>> matClone;
-	//
-	/*cv::Mat NewSamples(0, mats[0].size(), CV_16FC1);*/
-	//for (unsigned int i = 0; i < matClone.size(); ++i)
-	//{
-	//	// Make a temporary cv::Mat row and add to NewSamples _without_ data copy
-	//	cv::Mat Sample(1, matClone[0].size(), CV_16FC1, matClone[i].data());
-	//	cv::Mat()
-	//	NewSamples.push_back(Sample);
-	//}
-	
-	//시프트 연산 테스트
-	//std::cout << "10진수 2144444444 = 2진수로 "<<std::bitset<32>(2144444444) << std::endl;
-	//std::cout << "10진수 2144444444를 ReverseInt 2진수로 " <<std::bitset<32>(op.ReverseInt(2144444444)) << std::endl;
+	std::cout << "풀링 연산 후 :\n" << out << std::endl;*/
 	
 	//read MNIST iamge into OpenCV Mat vector
-	/*std::vector<cv::Mat> trainingVec;
+	std::vector<cv::Mat> trainingVec;
 	std::vector<uchar> labelVec;
 	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
 	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
-	op.MatPrint(trainingVec, labelVec);*/
+	op.MatPrint(trainingVec, labelVec);
+	CNNMachine cnn;
+	cnn.Init(trainingVec, labelVec);
+
+	cnn.Training(1, 1, 1);
+
+	std::cout << "END" << std::endl;
 	return 0;
 }

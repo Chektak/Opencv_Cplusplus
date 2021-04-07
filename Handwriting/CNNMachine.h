@@ -5,7 +5,7 @@ class CNNMachine
 {
 public:
 	//훈련 데이터 순서 : 데이터 수, 행, 열
-	std::vector<cv::Mat>* trainingMats; //=x1Mats
+	std::vector<cv::Mat> trainingMats; //=x1Mats
 	std::vector<cv::Mat> x1ZeroPaddingMats;
 
 	//커널 데이터 순서 : 채널 수, 커널 수, 행, 열
@@ -22,7 +22,7 @@ public:
 	
 	//풀링결과 데이터 순서 : 데이터 수, 채널 수, 행, 열
 	std::vector<std::vector<cv::Mat>> poolresult1;
-	std::vector<std::vector<cv::Mat>> poolresultZeroPadding1;
+	std::vector<std::vector<cv::Mat>> poolresult1ZeroPadding;
 	std::vector<std::vector<cv::Mat>> poolresult2;
 	cv::Size poolSize;
 	cv::Size poolStride;
@@ -33,12 +33,16 @@ public:
 	cv::Mat yHatMat;
 	cv::Mat yMat;
 
+	//역방향 계산시 사용하기 위해 conv1가 Max풀링될 때 필터를 저장
+	std::vector<std::vector<cv::Mat>> conv1PoolFilters;
+	std::vector<std::vector<cv::Mat>> conv2PoolFilters;
+
 	double lossAverage;
 public:
 	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);
 	//정방향 계산
 	void ForwardPropagation();
-	void BackPropagation(cv::InputArray _Input, cv::OutputArray _Output);
+	void BackPropagation();
 	void Training(int epoch, float learningRate, float l2);
 
 };
