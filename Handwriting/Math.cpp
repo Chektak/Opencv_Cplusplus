@@ -127,37 +127,86 @@ void Math::MaxPooling(cv::InputArray _Input, cv::OutputArray _Output, const cv::
 
 
 
-void Math::MaxPoolingReverse(cv::InputArray _PoolInput, cv::OutputArray _PoolFilter, cv::InputArray _PoolResult)
+void Math::GetMaxPoolingFilter(cv::InputArray _PoolInput, cv::OutputArray _PoolFilter, cv::InputArray _PoolResult, const cv::Size& poolSize, const cv::Size& stride)
 {
 	cv::Mat poolInput = _PoolInput.getMat();
 	cv::Mat poolResult = _PoolResult.getMat();
 	
-	
-	int resultIndexY = 0;
-	int resultIndexX = 0;
-	float findNum = poolResult.data[resultIndexY * poolResult.cols + resultIndexX];
-
 	//PoolFilter를 PoolInput과 같은 크기로 생성
 	_PoolFilter.create(_PoolInput.size(), _PoolInput.type());
 	_PoolFilter.setTo(0);
 	cv::Mat poolFilter = _PoolFilter.getMat();
 	
-	for (int y = 0; y < poolInput.rows; y++) {
-		for (int x = 0; x < poolInput.cols; x++) {
-			if (poolInput.at<float>(y, x) == findNum) {
-				poolFilter.at<float>(y, x) = 1;
-				//다음 인덱스 계산
-				resultIndexY = (resultIndexX + 1) / poolResult.cols;
-				resultIndexX = (resultIndexX + 1) % poolResult.cols;
-				findNum = poolResult.data[resultIndexY * poolResult.cols + resultIndexX];
+	//poolResult 행렬 요소에 대응하는 입력 행렬 요소를 찾아, 풀링 필터를 활성화
+	for (int y = 0; y < poolResult.rows; y++) {
+		for (int x = 0; x < poolResult.cols; x++) {
+			bool findFlag = false;
+			for (int ky = 0; ky < poolSize.height && findFlag == false; ky++) {
+				for (int kx = 0; kx < poolSize.width; kx++) {
+					if (poolResult.at<float>(y,x) == poolInput.at<float>(y * stride.height + ky, x * stride.width + kx)) {
+						poolFilter.at<float>(y * stride.height + ky, x * stride.width + kx) = 1;
+						findFlag = true;
+						break;
+					}
+				}
 			}
 		}
 	}
 }
 
-void Math::ConvolutionReverse(cv::InputArray _Input, cv::OutputArray _Output, const cv::Size& outputSize, cv::InputArray k, const cv::Size& stride)
+void Math::MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray _PoolFilter)
 {
+	cv::Mat inputMat = _Input.getMat();
+	cv::Mat poolFilterMat = _PoolFilter.getMat();
 
+	inputMat.copyTo(_Output);
+	cv::Mat outputMat = _Output.getMat();
+
+	outputMat = outputMat.mul(poolFilterMat);
+}
+
+void Math::GetConvolutionKFilters(cv::InputArray _Input, std::vector<std::vector<std::vector<float>>>* _Output, cv::InputArray k, const cv::Size& stride)
+{
+	//std::vector<std::vector<std::vector<float>>> _Output
+	//데이터 순서 : k행렬 크기의 행, k열, 입력 행렬값*k행*k열
+	cv::Mat input = _Input.getMat();
+	cv::Mat kernel = k.getMat();
+
+	//커널의 합성곱 계수를 제로 패딩 행렬에서 추출해 Output에 저장
+	for (int y = 0; y < input.rows; y++) {
+		for (int x = 0; x < input.cols; x++) {
+			for (int ky = 0; ky < kernel.rows; ky++) {
+				for (int kx = 0; kx < kernel.cols; kx++) {
+					_Output->at(ky).at(kx).at((ky*(unsigned long long)kernel.cols)+kx) = input.at<float>(y * stride.height + ky, x * stride.width + kx);
+				}
+			}
+		}
+	}
+}
+
+
+void Math::ConvolutionReverse(cv::InputArray _ConvResult, cv::OutputArray _Output, cv::InputArray _ConvInput, const std::vector<std::vector<std::vector<float>>>& _KernelFilter)
+{
+	cv::Mat convResult = _ConvResult.getMat();
+	_Output.create(cv::Size(_KernelFilter[0].size(), _KernelFilter.size()), CV_32FC1);
+	_Output.setTo(0);
+	cv::Mat output = _Output.getMat();
+
+	for (int iY = 0; iY < convResult.rows; iY++) {
+		for (int iX = 0; iX < convResult.cols; iX++) {
+
+			for (int kY = 0; kY < _KernelFilter.size(); kY++) {
+				for (int kX = 0; kX < _KernelFilter[0].size(); kX++) {
+					/*float kElementSum = 0;
+
+					for (int kN = 0; kN < _KernelFilter[0][0].size(); kN++) {
+						kElementSum+=_KernelFilter[iY][iX][iY * _KernelFilter[0].size() + iX];
+					}*/
+					output.at<float>(kY, kX) =  / convResult.at<float>(iY, iX);
+				}
+			}
+		}
+	}
 }
 
 void Math::NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w)
