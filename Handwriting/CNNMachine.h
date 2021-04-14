@@ -35,12 +35,12 @@ public:
 	cv::Mat yHatMat;
 	cv::Mat yMat;
 
-	//역방향 계산시 사용하는 합성곱 결과 행렬이 Max풀링될 때 필터
+	//역방향 계산시 사용하는 Max풀링 필터(풀링을 입력행렬에 대해 미분)
 	//데이터 순서 : 데이터 수, 커널 수, 행렬
 	std::vector<std::vector<cv::Mat>> pool1Filters;
 	std::vector<std::vector<cv::Mat>> pool2Filters;
 
-	//역방향 계산시 사용하는 입력 행렬이 커널과 합성곱될 때 필터
+	//역방향 계산시 사용하는 커널 필터(합성곱을 커널에 대해 미분)
 	//데이터 순서 : 데이터 수, 채널 수, 행, 열, K에 곱해지는 계수 수
 	std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> conv1KernelFilters;
 	std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> conv2KernelFilters;

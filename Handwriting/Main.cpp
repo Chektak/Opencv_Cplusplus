@@ -3,7 +3,6 @@ int main() {
 	OpencvPractice op;
 
 	std::cout << "Hello OpenCV" << CV_VERSION << std::endl;
-
 	//op.Camera_In();
 	//op.Video_In("Resources/Video/Anime.mp4", 0.25f);
 	//op.Camera_In_Video_Out("aaa.avi");
@@ -55,5 +54,20 @@ int main() {
 	cnn.Training(1, 1, 1);
 
 	std::cout << "END" << std::endl;
+
+	/*cv::Mat a = cv::Mat_<float>(cv::Size(10, 1));
+	a.setTo(1);
+	cv::Mat b = cv::Mat_<float>(cv::Size(10, 1));
+	b.setTo(0);
+	b.at<float>(0, 5) = 1000.0f;
+	cv::Mat c = cv::Mat_<float>(cv::Size(10, 6));
+	c.setTo(1);
+	std::cout << "dddddddddddddddddddddddddddddddd" << std::endl;
+	std::cout << a << std::endl;
+	std::cout << b << std::endl;
+	std::cout << c << std::endl;
+	std::cout << a - b << std::endl;
+	std::cout << (a - b)*c.t() << std::endl;*/
+	//std::cout << cnn.yMat - cnn.yHatMat << std::endl;
 	return 0;
 }

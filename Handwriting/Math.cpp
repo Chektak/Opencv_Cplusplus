@@ -154,15 +154,35 @@ void Math::GetMaxPoolingFilter(cv::InputArray _PoolInput, cv::OutputArray _PoolF
 	}
 }
 
-void Math::MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray _PoolFilter)
+void Math::MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray _PoolFilter, const cv::Size& poolSize, const cv::Size& stride)
 {
-	cv::Mat inputMat = _Input.getMat();
+	cv::Mat zeroPaddingMat = _Input.getMat();
 	cv::Mat poolFilterMat = _PoolFilter.getMat();
 
-	inputMat.copyTo(_Output);
+	//입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
+	if ((zeroPaddingMat.rows - poolSize.height) / stride.height + 1 != _Input.getMat().rows
+		|| (zeroPaddingMat.cols - poolSize.width) / stride.width + 1 != _Input.getMat().cols) {
+		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, zeroPaddingMat.size(), poolSize, stride);
+	}
+
+	zeroPaddingMat.copyTo(_Output);
 	cv::Mat outputMat = _Output.getMat();
 
 	outputMat = outputMat.mul(poolFilterMat);
+	outputMat.copyTo(_Output);
+
+	//_Output.createSameSize(_PoolFilter, CV_32FC1);
+	//_Output.setTo(0);
+	//cv::Mat outputMat = _Output.getMat();
+
+	//int inputMatIter = 0;
+	//for (int oY = 0; oY < outputMat.rows; oY++) {
+	//	for (int oX = 0; oX < outputMat.cols; oX++) {
+	//		//1인 곳에 inputMat을 차례로 할당
+	//		if (poolFilterMat.at<float>(oY, oX) == 1)
+	//			outputMat.at<float>(oY, oX) = inputMat.data[inputMatIter++];
+	//	}
+	//}
 }
 
 void Math::GetConvolutionKFilters(cv::InputArray _Input, std::vector<std::vector<std::vector<float>>>* _Output, cv::InputArray k, const cv::Size& stride)
@@ -185,24 +205,30 @@ void Math::GetConvolutionKFilters(cv::InputArray _Input, std::vector<std::vector
 }
 
 
-void Math::ConvolutionReverse(cv::InputArray _ConvResult, cv::OutputArray _Output, cv::InputArray _ConvInput, const std::vector<std::vector<std::vector<float>>>& _KernelFilter)
+void Math::ConvolutionReverse(cv::InputArray _Input, cv::OutputArray _Output, const std::vector<std::vector<std::vector<float>>>& _KernelFilter, const cv::Size& stride)
 {
-	cv::Mat convResult = _ConvResult.getMat();
-	_Output.create(cv::Size(_KernelFilter[0].size(), _KernelFilter.size()), CV_32FC1);
+	//입력 행렬에 대응하는 필터 요소를 알기 위해
+	//합성곱 함수 입력과 같은 크기가 되도록 Input행렬에 제로패딩 추가
+	cv::Mat zeroPaddingMat = _Input.getMat();
+	const int filterRows = _KernelFilter.size();
+	const int filterCols = _KernelFilter.at(0).size();
+	//입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
+	if ((zeroPaddingMat.rows - filterRows) / stride.height + 1 != _Input.getMat().rows
+		|| (zeroPaddingMat.cols - filterCols) / stride.width + 1 != _Input.getMat().cols) {
+		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, zeroPaddingMat.size(), cv::Size(filterCols, filterRows), stride);
+	}
+
+	_Output.create(cv::Size(filterCols, filterRows), CV_32FC1);
 	_Output.setTo(0);
 	cv::Mat output = _Output.getMat();
 
-	for (int iY = 0; iY < convResult.rows; iY++) {
-		for (int iX = 0; iX < convResult.cols; iX++) {
+	for (int iY = 0; iY < zeroPaddingMat.rows; iY++) {
+		for (int iX = 0; iX < zeroPaddingMat.cols; iX++) {
 
-			for (int kY = 0; kY < _KernelFilter.size(); kY++) {
-				for (int kX = 0; kX < _KernelFilter[0].size(); kX++) {
-					/*float kElementSum = 0;
+			for (int kY = 0; kY < filterRows; kY++) {
+				for (int kX = 0; kX < filterCols; kX++) {
 
-					for (int kN = 0; kN < _KernelFilter[0][0].size(); kN++) {
-						kElementSum+=_KernelFilter[iY][iX][iY * _KernelFilter[0].size() + iX];
-					}*/
-					output.at<float>(kY, kX) =  / convResult.at<float>(iY, iX);
+					output.at<float>(kY, kX) += zeroPaddingMat.at<float>(iY, iX) * _KernelFilter.at(kY).at(kX).at((kY * (unsigned long long)filterCols) + kX);
 				}
 			}
 		}

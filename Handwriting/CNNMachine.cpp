@@ -43,19 +43,19 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 
 	//1번째 합성곱 커널의 역방향 계산 필터 초기화
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		conv1Filters.push_back(std::vector<std::vector<std::vector<std::vector<float>>>>());
+		conv1KernelFilters.push_back(std::vector<std::vector<std::vector<std::vector<float>>>>());
 		//커널 1은 채널 한개(입력층 채널이 흑백 단일)
 		for (int k1i = 0; k1i < kernels1.size(); k1i++) {
-			conv1Filters[x1i].push_back(std::vector<std::vector<std::vector<float>>>());
+			conv1KernelFilters[x1i].push_back(std::vector<std::vector<std::vector<float>>>());
 
 			int kf1Num = kernels1[0][0].rows * kernels1[0][0].cols;
 			for (int kf1Y = 0; kf1Y < kernels1[0][0].rows; kf1Y++) {
-				conv1Filters[x1i][k1i].push_back(std::vector<std::vector<float>>());
+				conv1KernelFilters[x1i][k1i].push_back(std::vector<std::vector<float>>());
 				for (int kf1X = 0; kf1X < kernels1[0][0].cols; kf1X++) {
-					conv1Filters[x1i][k1i][kf1Y].push_back(std::vector<float>());
+					conv1KernelFilters[x1i][k1i][kf1Y].push_back(std::vector<float>());
 					//K에 곱해지는 계수 수만큼 메모리 할당
 					for (int kf1N = 0; kf1N < kf1Num; kf1N++) {
-						conv1Filters[x1i][0][kf1Y][kf1X].push_back(0);
+						conv1KernelFilters[x1i][0][kf1Y][kf1X].push_back(0);
 					}
 				}
 			}
@@ -63,19 +63,19 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	}
 	//2번째 합성곱 커널의 역방향 계산 필터 초기화
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		conv2Filters.push_back(std::vector<std::vector<std::vector<std::vector<float>>>>());
+		conv2KernelFilters.push_back(std::vector<std::vector<std::vector<std::vector<float>>>>());
 		//커널 2은 채널 개수가 커널1의 개수
 		for (int k1i = 0; k1i < kernels1[0].size(); k1i++) {
-			conv2Filters[x1i].push_back(std::vector<std::vector<std::vector<float>>>());
+			conv2KernelFilters[x1i].push_back(std::vector<std::vector<std::vector<float>>>());
 
 			int kf2Num = kernels2[0][0].rows * kernels2[0][0].cols;
 			for (int kf2Y = 0; kf2Y < kernels2[0][0].rows; kf2Y++) {
-				conv2Filters[x1i][k1i].push_back(std::vector<std::vector<float>>());
+				conv2KernelFilters[x1i][k1i].push_back(std::vector<std::vector<float>>());
 				for (int kf2X = 0; kf2X < kernels2[0][0].cols; kf2X++) {
-					conv2Filters[x1i][k1i][kf2Y].push_back(std::vector<float>());
+					conv2KernelFilters[x1i][k1i][kf2Y].push_back(std::vector<float>());
 					//K에 곱해지는 계수 수만큼 메모리 할당
 					for (int kf2N = 0; kf2N < kf2Num; kf2N++) {
-						conv2Filters[x1i][k1i][kf2Y][kf2X].push_back(0);
+						conv2KernelFilters[x1i][k1i][kf2Y][kf2X].push_back(0);
 					}
 				}
 			}
@@ -151,8 +151,6 @@ void CNNMachine::ForwardPropagation()
 	cv::Mat tempMat;
 
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		if (x1i % 10 == 0)
-			std::cout << x1i << std::endl;
 		tempArr.push_back(std::vector<float>());
 		x1ZeroPaddingMats.push_back(cv::Mat_<float>());
 
@@ -240,54 +238,89 @@ void CNNMachine::ForwardPropagation()
 
 void CNNMachine::BackPropagation()
 {
-	cv::Mat temp = yMat - yHatMat;
-	
-#pragma region 완전연결신경망층 가중치 행렬 역방향 계산
-	wMat -= -(xMat.t() * (temp));
-	//std::cout << wMat.size() << std::endl;
-#pragma endregion
-	//벡터곱을 위해 -(yMat-yHatMat)*wMat을 pool2result 행렬 크기로 변환
-	std::vector<std::vector<cv::Mat>> temp2
-		//= temp * wMat.t()
-		;
+	cv::Mat yLoss = -(yMat - yHatMat);
+	cv::Mat wT = wMat.t();
+	cv::Mat yLossW = yLoss*wT;
+	std::cout << "yLossW size = " <<yLossW.size()<<std::endl;
+	//벡터곱을 위해 yLossW를 pool2result 행렬 크기로 변환
+	std::vector<std::vector<cv::Mat>> yLossWMats;
+	//훈련 데이터 수(= USEDATA_NUM)만큼 반복
+	for (int i = 0; i < poolresult2.size(); i++) {
+		yLossWMats.push_back(std::vector<cv::Mat>());
+		//poolresult2의 채널 수(= KERNEL2_NUM)만큼 반복
+		for (int j = 0; j < poolresult2[0].size(); j++) {
+			cv::Mat sample = yLossW.row(i).reshape(1, poolresult2[0].size()).row(j).reshape(1, poolresult2[0][0].rows);
+			yLossWMats[i].push_back(sample);
+		}
+	}
+	std::vector<std::vector<cv::Mat>> yLossWPoolUpMats;
 
+	//변환된 yLossW를 풀링 필터로 Up-Sampleling 후 ReLu(Conv)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+		yLossWPoolUpMats.push_back(std::vector<cv::Mat>());
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
+			yLossWPoolUpMats[x1i].push_back(cv::Mat());
+
 			//Pooling 함수 역방향 계산
-			Math::GetMaxPoolingFilter(conv2ZeroPaddingMats[x1i][k2i], pool2Filters[x1i][k2i], poolresult1[x1i][k2i], poolSize, poolStride);
-			//ReLu 함수 역방향 계산
-			//(conv1Mat은 정방향 계산에서 이미 ReLU를 적용했으므로 생략)
-			//Math::Relu(conv1Mats[x1i][k1i], conv1Mats[x1i][k1i]);
-		}
-	}
-#pragma region 합성곱층2 가중치 행렬(커널2) 역방향 계산
-	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
-			Math::GetConvolutionKFilters(poolresult1ZeroPadding[x1i][k1i], &conv2Filters[x1i][k1i], kernels2[0][0], kernel2Stride);
-
-			//K2 역방향 필터와 벡터곱을 위해 ReLu함수 역방향 계산까지의 결과를 K행렬 크기로 변환
+			Math::GetMaxPoolingFilter(conv2ZeroPaddingMats[x1i][k2i], pool2Filters[x1i][k2i], poolresult2[x1i][k2i], poolSize, poolStride);
 			
+			std::cout << pool2Filters[x1i][k2i].size() << std::endl;
+			std::cout << pool2Filters[x1i][k2i] << std::endl;
+			std::cout << yLossWMats[x1i][k2i].size() << std::endl;
+			std::cout << yLossWMats[x1i][k2i] << std::endl;
+
+			//풀링 필터로 업샘플링
+			Math::MaxPoolingReverse(yLossWMats[x1i][k2i], yLossWPoolUpMats[x1i][k2i], pool2Filters[x1i][k2i], poolSize, poolStride);
+
+			std::cout << yLossWPoolUpMats[x1i][k2i] << std::endl;
+			std::cout << conv2Mats[x1i][k2i] << std::endl;
+			
+			//ReLu 함수 역방향 계산
+			//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
+			//Math::Relu(conv2Mats[x1i][k2i], conv2Mats[x1i][k2i]);
+			
+			yLossWPoolUpMats[x1i][k2i] = yLossWPoolUpMats[x1i][k2i].mul(conv2Mats[x1i][k2i]);
+			std::cout << yLossWPoolUpMats[x1i][k2i] << std::endl;
+
 		}
-		//kernels2[x1i][k2i] += 
-		//std::cout << kernels2[x1i][k2i] << std::endl;
 	}
 
-#pragma endregion
-
-
-	
 	/*for (int i = 0; i < trainingMats.size(); i++) {
 		for (int j = 0; j < KERNEL1_NUM; j++) {
 			kernels1[i][j] = temp*wMat.t();
 			std::cout << kernels1[i][j] << std::endl;
 		}
 	}*/
+
+	
+#pragma region 합성곱층2 가중치 행렬(커널2) 역방향 계산
+	//for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+	//	for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
+	//		//합성곱을 커널에 대해 미분 (커널 필터 얻기)
+	//		Math::GetConvolutionKFilters(poolresult1ZeroPadding[x1i][k1i], &conv2KernelFilters[x1i][k1i], kernels2[0][0], kernel2Stride);
+	//		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
+	//			cv::Mat kTemp;
+	//			Math::ConvolutionReverse(yLossWMats[x1i][k2i], kTemp, conv2KernelFilters[x1i][k1i], kernel2Stride);
+	//			std::cout << kTemp << std::endl;
+	//			kernels2[k1i][k2i] -= kTemp;
+	//		}
+	//	}
+	//}
+
+#pragma endregion
+
+#pragma region 완전연결신경망층 가중치 행렬 역방향 계산
+	//wMat -= (xMat.t() * (yLoss));
+	//std::cout << wMat.size() << std::endl;
+#pragma endregion
+	
+	
 }
 
 void CNNMachine::Training(int epoch, float learningRate, float l2)
 {
 	for (int i = 0; i < epoch; i++) {
 		ForwardPropagation();
-		//BackPropagation();
+		BackPropagation();
 	}
 }

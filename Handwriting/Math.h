@@ -16,17 +16,17 @@ namespace Math {
     
     void MaxPooling(cv::InputArray _Input, cv::OutputArray _Output, const cv::Size& poolSize, const cv::Size& stride);
     
-    //풀링 함수에 입력한 행렬과 결과 행렬을 비교해, 풀링 역방향 필터를 반환
+    //풀링 함수의 입력 행렬에 대한 미분을 반환
     void GetMaxPoolingFilter(cv::InputArray _PoolInput, cv::OutputArray _PoolFilter, cv::InputArray _PoolResult, const cv::Size& poolSize, const cv::Size& stride);
     
-    //Input행렬과 PoolFilter 행렬을 벡터곱해 반환
-    void MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output,cv::InputArray _PoolFilter);
+    //Input행렬을 UpSampleling해 PoolFilter 행렬과 벡터곱해 반환
+    void MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output,cv::InputArray _PoolFilter, const cv::Size& poolSize, const cv::Size& stride);
     
-    //제로 패딩 행렬과 커널의 합성곱을 분석해, 커널 역방향 필터(커널과 곱해지는 계수들)를 Output에 반환
+    //합성곱 함수의 커널에 대한 편미분(커널과 곱해지는 계수들)을 Output으로 반환
     void GetConvolutionKFilters(cv::InputArray _Input, std::vector<std::vector<std::vector<float>>>* _Output, cv::InputArray k, const cv::Size& stride);
 
-    //합성곱 결과 행렬을 입력 행렬과 커널 역방향 필터로 추출해 커널 형태로 반환
-    void ConvolutionReverse(cv::InputArray _ConvResult, cv::OutputArray _Output, cv::InputArray _ConvInput,const std::vector<std::vector<std::vector<float>>>& _KernelFilter);
+    //Input행렬 요소에 대응하는 필터 요소를 곱한다. 그리고 필터 크기 Output 행렬 반환
+    void ConvolutionReverse(cv::InputArray _Input, cv::OutputArray _Output,const std::vector<std::vector<std::vector<float>>>& _KernelFilter, const cv::Size& stride);
 
     void NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w);
 
