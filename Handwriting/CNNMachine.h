@@ -37,14 +37,22 @@ public:
 
 	//역방향 계산시 사용하는 Max풀링 필터(풀링을 입력행렬에 대해 미분)
 	//데이터 순서 : 데이터 수, 커널 수, 행렬
-	std::vector<std::vector<cv::Mat>> pool1Filters;
-	std::vector<std::vector<cv::Mat>> pool2Filters;
+	std::vector<std::vector<cv::Mat>> pool1BackpropFilters;
+	std::vector<std::vector<cv::Mat>> pool2BackpropFilters;
 
-	//역방향 계산시 사용하는 커널 필터(합성곱을 커널에 대해 미분)
-	//데이터 순서 : 데이터 수, 채널 수, 행, 열, K에 곱해지는 계수 수
-	std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> conv1KernelFilters;
-	std::vector<std::vector<std::vector<std::vector<std::vector<float>>>>> conv2KernelFilters;
+	/* 합성곱을 커널에 대해 미분할 수 없는 이유								*
+	*	: 제로 패딩 행이나 열과 0인 입력행렬을 구분할 수 없음					*
+	*	해결책1 : 입력행렬을 제로패딩할 때 원본 입력행렬의 st, ed 포인트를 저장	*
+	*	해결책2 : 입력행렬과 제로패딩, 스트라이드, 커널 크기를 분석해			*
+	*			수식으로 제로패딩 부분을 알아낸다							*
+	*   해결책 1 사용														*/
 
+	//역방향 계산시 사용하는 합성곱 필터(제로 패딩과 입력행렬을 구분하기 위해 좌표를 기록해 사용)
+	//데이터 순서 : 합성곱 결과행렬 행*열, pair(x 입력 행렬 start index, x 입력 행렬 end index)
+	std::vector<std::vector<std::vector<std::pair<int, int>>>> conv1BackpropFilters;
+	std::vector<std::vector<std::vector<std::pair<int, int>>>> conv2BackpropFilters;
+
+	
 	double lossAverage;
 public:
 	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);

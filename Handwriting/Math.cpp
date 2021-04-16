@@ -154,9 +154,9 @@ void Math::GetMaxPoolingFilter(cv::InputArray _PoolInput, cv::OutputArray _PoolF
 	}
 }
 
-void Math::MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray _PoolFilter, const cv::Size& poolSize, const cv::Size& stride)
+void Math::MaxPoolingBackprop(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray _PoolFilter, const cv::Size& poolSize, const cv::Size& stride)
 {
-	cv::Mat zeroPaddingMat = _Input.getMat();
+	cv::Mat zeroPaddingMat = _Input.getMat(); 
 	cv::Mat poolFilterMat = _PoolFilter.getMat();
 
 	//입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
@@ -170,42 +170,82 @@ void Math::MaxPoolingReverse(cv::InputArray _Input, cv::OutputArray _Output, cv:
 
 	outputMat = outputMat.mul(poolFilterMat);
 	outputMat.copyTo(_Output);
-
-	//_Output.createSameSize(_PoolFilter, CV_32FC1);
-	//_Output.setTo(0);
-	//cv::Mat outputMat = _Output.getMat();
-
-	//int inputMatIter = 0;
-	//for (int oY = 0; oY < outputMat.rows; oY++) {
-	//	for (int oX = 0; oX < outputMat.cols; oX++) {
-	//		//1인 곳에 inputMat을 차례로 할당
-	//		if (poolFilterMat.at<float>(oY, oX) == 1)
-	//			outputMat.at<float>(oY, oX) = inputMat.data[inputMatIter++];
-	//	}
-	//}
 }
 
-void Math::GetConvolutionKFilters(cv::InputArray _Input, std::vector<std::vector<std::vector<float>>>* _Output, cv::InputArray k, const cv::Size& stride)
+
+void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<int, int>>* _Output, cv::InputArray k, const cv::Size& stride)
 {
-	//std::vector<std::vector<std::vector<float>>> _Output
-	//데이터 순서 : k행렬 크기의 행, k열, 입력 행렬값*k행*k열
 	cv::Mat input = _Input.getMat();
+	cv::Mat zeroPaddingMat = _Input.getMat();
 	cv::Mat kernel = k.getMat();
 
-	//커널의 합성곱 계수를 제로 패딩 행렬에서 추출해 Output에 저장
-	for (int y = 0; y < input.rows; y++) {
-		for (int x = 0; x < input.cols; x++) {
-			for (int ky = 0; ky < kernel.rows; ky++) {
-				for (int kx = 0; kx < kernel.cols; kx++) {
-					_Output->at(ky).at(kx).at((ky*(unsigned long long)kernel.cols)+kx) = input.at<float>(y * stride.height + ky, x * stride.width + kx);
-				}
-			}
+	//제로 패딩 행렬 생성 시뮬레이션으로 zeroPaddingMatrix에 대한 inputMatrix Offset을 얻는다
+	cv::Rect inputOffset(0,0,0,0);
+
+	double p = 0;
+	int oH = (int)((input.rows + 2 * p - k.size().height) / stride.height) + 1;
+	int oW = (int)((input.cols + 2 * p - k.size().width) / stride.width) + 1;
+
+
+	//패딩이 0.5 늘어날 때마다왼쪽 + 위, 오른쪽 + 아래 순으로 행렬 확장
+	while (oH != input.rows) {
+		p += 0.5;
+		if (p - (int)p != 0)
+			inputOffset.y++;
+			//cv::copyMakeBorder(_Output, _Output, 1, 0, 0, 0, cv::BORDER_CONSTANT, 0);
+		else
+			inputOffset.height++;
+			//cv::copyMakeBorder(_Output, _Output, 0, 1, 0, 0, cv::BORDER_CONSTANT, 0);
+
+		oH = (int)((input.rows + 2 * p - k.size().height) / stride.height) + 1;
+	}
+	p = 0;
+	while (oW != input.cols) {
+		p += 0.5;
+		if (p - (int)p != 0)
+			inputOffset.x++;
+			//cv::copyMakeBorder(_Output, _Output, 0, 0, 1, 0, cv::BORDER_CONSTANT, 0);
+		else
+			inputOffset.width++;
+			//cv::copyMakeBorder(_Output, _Output, 0, 0, 0, 1, cv::BORDER_CONSTANT, 0);
+
+		oW = (int)((input.cols + 2 * p - k.size().width) / stride.width) + 1;
+	}
+	
+	std::cout << "합성곱 출력 행렬" << std::endl;
+	int stX, stY, edX, edY;
+
+	//세임 패딩 연산이므로 input Matrix Size = output Matrix Size
+	for (int outputY = 0; outputY < input.rows; outputY++) {
+		for (int outputX = 0; outputX < input.cols; outputX++) {
+			//start좌표
+			stX = inputOffset.x - outputX * stride.width;
+			stY = inputOffset.y - outputY * stride.height;
+			edX = stX + (input.rows - 1);
+			edY = stY + (input.cols - 1);
+			if (edX > k.size().width - 1)
+				edX = k.size().width - 1;
+			if (edY > k.size().width - 1)
+				edY = k.size().width - 1;
+			if (stX < 0)
+				stX = 0;
+			if (stY < 0)
+				stY = 0;
+
+			//start좌표
+			_Output->at((unsigned long long)outputY * input.cols + outputX).first = (stY)*input.cols + (stX);
+			//end좌표
+			_Output->at((unsigned long long)outputY * input.cols + outputX).second = (edY)*input.cols + (edX);
+
+			std::cout << outputX << ", " << outputY << " 좌표의 입력 행렬 합성곱 범위 : " << std::endl;
+			std::cout << "시작점 : " << stX << ", " << stY << std::endl;
+			std::cout << "종료점 : " << edX << ", " << edY << std::endl;
 		}
 	}
 }
 
 
-void Math::ConvolutionReverse(cv::InputArray _Input, cv::OutputArray _Output, const std::vector<std::vector<std::vector<float>>>& _KernelFilter, const cv::Size& stride)
+void Math::ConvKBackprop(cv::InputArray _Input, cv::OutputArray _Output, const std::vector<std::vector<std::vector<float>>>& _KernelFilter, const cv::Size& stride)
 {
 	//입력 행렬에 대응하는 필터 요소를 알기 위해
 	//합성곱 함수 입력과 같은 크기가 되도록 Input행렬에 제로패딩 추가
