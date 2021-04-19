@@ -48,9 +48,9 @@ public:
 	*   해결책 1 사용														*/
 
 	//역방향 계산시 사용하는 합성곱 필터(제로 패딩과 입력행렬을 구분하기 위해 좌표를 기록해 사용)
-	//데이터 순서 : 합성곱 결과행렬 행*열, pair(x 입력 행렬 start index, x 입력 행렬 end index)
-	std::vector<std::vector<std::vector<std::pair<int, int>>>> conv1BackpropFilters;
-	std::vector<std::vector<std::vector<std::pair<int, int>>>> conv2BackpropFilters;
+	//데이터 순서 : 합성곱 결과행렬 행*열, pair(커널 기준 x 입력 행렬 start index, 커널 기준 x 입력 행렬 end index)
+	std::vector<std::pair<int, int>> conv1BackpropFilters;
+	std::vector<std::pair<int, int>> conv2BackpropFilters;
 
 	
 	double lossAverage;

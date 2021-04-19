@@ -25,10 +25,11 @@ namespace Math {
     //합성곱에서 제로 패딩되지 않은 입력 행렬이 제로패딩될 때 Start, End 인덱스를 pair Output으로 반환
     void GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<int, int>>* _Output, cv::InputArray k, const cv::Size& stride);
     
-    //Input행렬 요소에 대응하는 K 필터행렬을 벡터곱한다. 그리고 필터 크기 Output 행렬 반환
-    void ConvKBackprop(cv::InputArray _Input, cv::OutputArray _Output,const std::vector<std::vector<std::vector<float>>>& _KernelFilter, const cv::Size& stride);
+    //Input행렬 요소에 대응하는 K 필터행렬을 벡터곱해 반환
+    void ConvKBackprop(cv::InputArray _Input, cv::OutputArray _Kernel, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride);
 
-    void ConvXBackprop(cv::InputArray _Input, cv::OutputArray _Output,const std::vector<std::vector<std::vector<float>>>& _KernelFilter, const cv::Size& stride);
+    //Input행렬과 합성곱을 X에 대해 미분한 행렬을 벡터곱해 반환
+    void ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride);
     
 
     void NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w);

@@ -51,18 +51,18 @@ int main() {
 	CNNMachine cnn;
 	cnn.Init(trainingVec, labelVec);
 
-	//cnn.Training(1, 1, 1);
+	cnn.Training(1, 1, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트
 	//3*3 크기의 입력 행렬, 3*3 크기의 커널 행렬, stride는 1*1 사용
-	cv::Mat input(cv::Size(3, 3), CV_32FC1);
+	/*cv::Mat input(cv::Size(3, 3), CV_32FC1);
 	cv::Mat k(cv::Size(3, 3), CV_32FC1);
 	std::vector<std::pair<int, int>> vec;
 	for (int i = 0; i < 9; i++) {
 		vec.push_back(std::pair<int, int>());
 	}
-	Math::GetConvBackpropFilters(input, &vec, k, cv::Size(1, 1));
+	Math::GetConvBackpropFilters(input, &vec, k, cv::Size(1, 1));*/
 
 
 	return 0;
