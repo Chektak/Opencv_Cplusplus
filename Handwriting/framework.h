@@ -16,8 +16,8 @@
 #include "OpencvPractice.h"
 #include "CNNMachine.h"
 
-#define USEDATA_NUM 1
+#define USEDATA_NUM 3
 #define KERNEL1_NUM 1
-#define KERNEL2_NUM 1
+#define KERNEL2_NUM 5
 //숫자 0~9를 분류하므로 클래스 분류 수는 10개
 #define CLASSIFICATIONNUM 10

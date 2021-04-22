@@ -1,11 +1,40 @@
 #include "CNNMachine.h"
 
+void CNNMachine::Training(int epoch, double learningRate, double l2)
+{
+	for (int i = 0; i < epoch; i++) {
+		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
+		std::cout << i<<"번째 훈련" << std::endl;
+		std::cout << "정방향 계산" << std::endl;
+		ForwardPropagation();
+		cost = 0;
+		for (int y = 0; y < yMat.rows; y++) {
+			for (int x = 0; x < yMat.cols; x++) {
+				//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
+				cost += yMat.at<double>(y, x) * log((yHatMat.at<double>(y, x) == 0) ? 0.00000000001 : yHatMat.at<double>(y, x));
+			}
+		}
+		//cost /= -yMat.rows;
+		cost *= -1;
+		//std::cout << i<<"yMat : " << yMat << std::endl;
+		//std::cout << "yHatMat : " << yHatMat << std::endl;
+		std::cout << "코스트 : " << cost << std::endl;
+
+		//아무키나 누르면 다음
+		if (cv::waitKey(0) != -1) {
+			std::cout << "역방향 계산" << std::endl;
+			BackPropagation(learningRate);
+			continue;
+		}
+	}
+}
+
 void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec)
 {
 	for (int i = 0; i < trainingVec.size(); i++) {
 		trainingMats.push_back(cv::Mat());
-		//uchar형 행렬 요소를 float형 행렬 요소로 타입 캐스팅
-		trainingVec[i].convertTo(trainingMats[i], CV_32FC1);
+		//uchar형 행렬 요소를 double형 행렬 요소로 타입 캐스팅
+		trainingVec[i].convertTo(trainingMats[i], CV_64FC1);
 	}
 
 	poolStride = cv::Size(2, 2);
@@ -16,14 +45,14 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	//커널 1은 채널 한개(입력층 채널이 흑백 단일)
 	kernels1.push_back(std::vector<cv::Mat>());
 	for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
-		kernels1[0].push_back(cv::Mat(cv::Size(3, 3), CV_32FC1));
-		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(1));
+		kernels1[0].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
+		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 
 		kernels2.push_back(std::vector<cv::Mat>());
 		//커널 2는 채널이 커널 1의 개수
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
-			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_32FC1));
-			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(1));
+			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
+			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 		}
 		
 		
@@ -37,8 +66,8 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	int wWidth = (trainingMats[0].cols - poolSize.width) / poolStride.width + 1;
 		wWidth = (wWidth - poolSize.width) / poolStride.width + 1;
 
-	wMat.create(cv::Size(CLASSIFICATIONNUM, wHeight * wWidth * KERNEL2_NUM), CV_32FC1);
-	gen.fill(wMat, cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(10));
+	wMat.create(cv::Size(CLASSIFICATIONNUM, wHeight * wWidth * KERNEL2_NUM), CV_64FC1);
+	gen.fill(wMat, cv::RNG::UNIFORM, cv::Scalar(-1), cv::Scalar(1));
 
 	
 #pragma endregion
@@ -55,19 +84,19 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 		pool1BackpropFilters.push_back(std::vector<cv::Mat>());
 		pool2BackpropFilters.push_back(std::vector<cv::Mat>());
 		for (int j = 0; j < KERNEL1_NUM; j++) {
-			conv1Mats[i].push_back(cv::Mat_<float>());
-			conv1ZeroPaddingMats[i].push_back(cv::Mat_<float>());
-			poolresult1[i].push_back(cv::Mat_<float>());
-			poolresult1ZeroPadding[i].push_back(cv::Mat_<float>());
+			conv1Mats[i].push_back(cv::Mat_<double>());
+			conv1ZeroPaddingMats[i].push_back(cv::Mat_<double>());
+			poolresult1[i].push_back(cv::Mat_<double>());
+			poolresult1ZeroPadding[i].push_back(cv::Mat_<double>());
 		
-			pool1BackpropFilters[i].push_back(cv::Mat_<float>());
+			pool1BackpropFilters[i].push_back(cv::Mat_<double>());
 		}
 		for (int j = 0; j < KERNEL2_NUM; j++) {
-			conv2Mats[i].push_back(cv::Mat_<float>());
-			conv2ZeroPaddingMats[i].push_back(cv::Mat_<float>());
-			poolresult2[i].push_back(cv::Mat_<float>());
+			conv2Mats[i].push_back(cv::Mat_<double>());
+			conv2ZeroPaddingMats[i].push_back(cv::Mat_<double>());
+			poolresult2[i].push_back(cv::Mat_<double>());
 			
-			pool2BackpropFilters[i].push_back(cv::Mat_<float>());
+			pool2BackpropFilters[i].push_back(cv::Mat_<double>());
 		}
 	}
 #pragma endregion
@@ -97,13 +126,13 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 #pragma endregion
 
 	//정답 데이터를 벡터로 변환한다.
-	yMat = cv::Mat::zeros(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_32FC1);
+	yMat = cv::Mat::zeros(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_64FC1);
 	for (int y = 0; y < labelVec.size(); y++) {
 		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
-		yMat.at<float>(y, labelVec[y]) = 1;
+		yMat.at<double>(y, labelVec[y]) = 1;
 	}
 
-	yHatMat.create(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_32FC1);
+	yHatMat.create(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_64FC1);
 
 
 	//lossAverage = 2305843009213693951;
@@ -112,12 +141,12 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 void CNNMachine::ForwardPropagation()
 {
 	//합성곱층 결과 행렬을 완전연결신경망 입력으로 변환할 때 사용
-	std::vector<std::vector<float>> tempArr;
+	std::vector<std::vector<double>> tempArr;
 	cv::Mat tempMat;
 
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		tempArr.push_back(std::vector<float>());
-		x1ZeroPaddingMats.push_back(cv::Mat_<float>());
+		tempArr.push_back(std::vector<double>());
+		x1ZeroPaddingMats.push_back(cv::Mat_<double>());
 
 		Math::CreateZeroPadding(trainingMats[x1i], x1ZeroPaddingMats[x1i], trainingMats[0].size(), kernels1[0][0].size(), kernel1Stride);
 		//합성곱층 1
@@ -142,8 +171,8 @@ void CNNMachine::ForwardPropagation()
 		}
 		//완전연결신경망 입력
 		//4차원 poolresult2를 2차원 행렬 xMat으로 변환
-		//vec<vec<Mat>> to vec<vec<float>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
-		//vec<vec<float>> to Mat 변환 : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
+		//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
+		//vec<vec<double>> to Mat 변환 : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
 			tempMat = poolresult2[x1i][k2i];
 			/*imshow("Window", trainingMats[x1i]);
@@ -152,17 +181,17 @@ void CNNMachine::ForwardPropagation()
 			if (cv::waitKey(0) != -1)
 				continue;*/
 			for (int i = 0; i < tempMat.rows; ++i) {
-				tempArr[x1i].insert(tempArr[x1i].end(), tempMat.ptr<float>(i), tempMat.ptr<float>(i) + tempMat.cols * tempMat.channels());
+				tempArr[x1i].insert(tempArr[x1i].end(), tempMat.ptr<double>(i), tempMat.ptr<double>(i) + tempMat.cols * tempMat.channels());
 			}
 		}
 	}
 	
-	xMat.create(cv::Size(0, tempArr[0].size()), CV_32FC1);
+	xMat.create(cv::Size(0, tempArr[0].size()), CV_64FC1);
 
 	for (unsigned int i = 0; i < tempArr.size(); ++i)
 	{
 		// Make a temporary cv::Mat row and add to NewSamples _without_ data copy
-		cv::Mat Sample(1, tempArr[0].size(), CV_32FC1, tempArr[i].data());
+		cv::Mat Sample(1, tempArr[0].size(), CV_64FC1, tempArr[i].data());
 		xMat.push_back(Sample);
 	}
 
@@ -170,7 +199,7 @@ void CNNMachine::ForwardPropagation()
 	Math::SoftMax(yHatMat, yHatMat);
 }
 
-void CNNMachine::BackPropagation(float learningRate)
+void CNNMachine::BackPropagation(double learningRate)
 {
 	cv::Mat yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	cv::Mat wT = wMat.t();
@@ -180,6 +209,13 @@ void CNNMachine::BackPropagation(float learningRate)
 	std::vector<std::vector<cv::Mat>> yLossWUpRelu2; //손실 함수를 합성곱2 결과에 대해 미분한 값 (Up은 Up-Sampleling(풀링함수의 미분) 약자)
 	std::vector<std::vector<cv::Mat>> yLossWUpRelu2P1UpRelu; //손실 함수를 합성곱1 결과에 대해 미분한 값
 
+	std::cout << "정방향 계산에서 밑의 yMat, yHatMat, yLoss로 역방향 계산 " << std::endl;
+	std::cout << "yMat : " << std::endl;
+	std::cout << yMat << std::endl;
+	std::cout << "yHatMat : " << std::endl;
+	std::cout << yHatMat << std::endl;
+	std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
+	std::cout << yLoss << std::endl;
 	//벡터곱을 위해 yLossW를 풀링2 결과 행렬 크기로 변환
 	for (int i = 0; i < trainingMats.size(); i++) {
 		yLossWTemp.push_back(std::vector<cv::Mat>());
@@ -187,12 +223,10 @@ void CNNMachine::BackPropagation(float learningRate)
 			cv::Mat sample = yLossW.row(i).reshape(1, poolresult2[0].size()).row(j).reshape(1, poolresult2[0][0].rows);
 			yLossWTemp[i].push_back(sample);
 		}
+
 	}
-	std::cout << yMat << std::endl;
-	std::cout << yHatMat << std::endl;
-	std::cout << yLoss << std::endl;
-	std::cout << wT << std::endl;
-	std::cout << yLossWTemp[0][0] << std::endl;
+	
+	//std::cout << wT << std::endl;
 
 	//차원 변환된 yLossW를 풀링 필터로 Up-Sampleling 후 Relu(Conv2)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
@@ -208,11 +242,11 @@ void CNNMachine::BackPropagation(float learningRate)
 			//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
 			//Math::Relu(conv2Mats[x1i][k2n], conv2Mats[x1i][k2n]);
 
-			std::cout << "ReLu Conv2와의 곱 전\n" << yLossWUpRelu2[x1i][k2n] << std::endl;
 			//Up-Sampleling 결과 행렬과 Relu(Conv2)행렬을 벡터곱
-			//yLossWUpRelu2[x1i][k2n] = yLossWUpRelu2[x1i][k2n].mul(conv2Mats[x1i][k2n]);
+			yLossWUpRelu2[x1i][k2n] = yLossWUpRelu2[x1i][k2n].mul(conv2Mats[x1i][k2n]);
 			//Math::Relu(yLossWUpRelu2[x1i][k2n], yLossWUpRelu2[x1i][k2n]);
-			//std::cout << "ReLu Conv2와의 곱 후\n" << yLossWUpRelu2[x1i][k2n] << std::endl;
+			//std::cout << "Conv2Mats\n" << conv2Mats[x1i][k2n] << std::endl;
+			//std::cout << "ReLu Conv2와의 벡터곱 후\n" << yLossWUpRelu2[x1i][k2n] << std::endl;
 		}
 	}
 	
@@ -276,16 +310,17 @@ void CNNMachine::BackPropagation(float learningRate)
 			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
 				//std::cout << "역방향 행렬 업데이트 전 : " << kernels2[k2c][k2n] << std::endl;
 
-				cv::Mat newInput = yLossWUpRelu2[x1i][k2n].mul(poolresult1[x1i][k2c]);
-				cv::Mat newKernel;
+				/*cv::Mat newInput = yLossWUpRelu2[x1i][k2n].mul(poolresult1[x1i][k2n]);
 				std::cout << yLossWUpRelu2[x1i][k2n] << std::endl;
-				std::cout << poolresult1ZeroPadding[0][0] << std::endl;
+				std::cout << poolresult1ZeroPadding[0][0] << std::endl;*/
 
-				//std::cout << newInput << std::endl;
+				cv::Mat newKernel;
 
-				Math::ConvKBackprop(-newInput,kernels2[k2c][k2n], newKernel, conv2BackpropFilters, kernel2Stride);
+				//std::cout << "풀링결과1 제로패딩" << std::endl;
+				//std::cout << poolresult1ZeroPadding[x1i][k2c] << std::endl;
+				Math::ConvKBackprop(-yLossWUpRelu2[x1i][k2n], poolresult1ZeroPadding[x1i][k2c], kernels2[k2c][k2n],newKernel, conv2BackpropFilters, kernel2Stride, learningRate);
 				newKernel.copyTo(kernels2[k2c][k2n]);
-				//std::cout << "역방향 행렬 업데이트 후 : " << kernels2[k2c][k2n] << std::endl;
+				std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels2[k2c][k2n] << std::endl;
 			}
 		}
 	}
@@ -300,26 +335,4 @@ void CNNMachine::BackPropagation(float learningRate)
 	
 }
 
-void CNNMachine::Training(int epoch, float learningRate, float l2)
-{
-	for (int i = 0; i < epoch; i++) {
-		ForwardPropagation();
-		cost = 0;
-		for (int y = 0; y < yMat.rows; y++) {
-			for (int x = 0; x < yMat.cols; x++) {
-				//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
-				cost += yMat.at<float>(y, x) * log((yHatMat.at<float>(y, x) == 0) ? 0.00000000001 : yHatMat.at<float>(y, x));
-			}
-		}
-		cost /= -yMat.rows;
-		//std::cout << i<<"yMat : " << yMat << std::endl;
-		//std::cout << "yHatMat : " << yHatMat << std::endl;
-		std::cout << "코스트 : " << cost << std::endl;
 
-		//아무키나 누르면 다음
-		if (cv::waitKey(0) != -1) {
-			BackPropagation(learningRate);
-			continue;
-		}
-	}
-}

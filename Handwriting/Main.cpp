@@ -9,8 +9,8 @@ int main() {
 	//op.FaceScan();
 
 	//소프트맥스 함수 테스트
-	//cv::Mat input = cv::Mat_<float>({2, 3}, {1,3,5,7,9,-600});
-	//cv::Mat w = cv::Mat_<float>({3, 2}, {0, 2, 0, 2, 0, 2});
+	//cv::Mat input = cv::Mat_<double>({2, 3}, {1,3,5,7,9,-600});
+	//cv::Mat w = cv::Mat_<double>({3, 2}, {0, 2, 0, 2, 0, 2});
 	//cv::Mat output;
 	//std::cout << "입력 데이터 :\n" << input << std::endl;
 	//Math::Relu(input, output);
@@ -26,8 +26,8 @@ int main() {
 	//std::cout << "10진수 2144444444를 ReverseInt 2진수로 " <<std::bitset<32>(op.ReverseInt(2144444444)) << std::endl;
 	
 	//교차 상관 연산
-	/*cv::Mat input = cv::Mat_<float>({ 3, 3 }, { 1,2,3,4,5,6,7,8,9 });
-	cv::Mat kernel = cv::Mat_<float>({ 3, 3 }, { 0,1,0,0,1,0,0,1,0 });
+	/*cv::Mat input = cv::Mat_<double>({ 3, 3 }, { 1,2,3,4,5,6,7,8,9 });
+	cv::Mat kernel = cv::Mat_<double>({ 3, 3 }, { 0,1,0,0,1,0,0,1,0 });
 	cv::Mat out;
 	cv::Mat zeroPadding;
 	std::cout << out.type() << std::endl;
@@ -51,13 +51,13 @@ int main() {
 	CNNMachine cnn;
 	cnn.Init(trainingVec, labelVec);
 
-	cnn.Training(1000, 0.001, 1);
+	cnn.Training(1000, 0.00001, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트
 	//3*3 크기의 입력 행렬, 3*3 크기의 커널 행렬, stride는 1*1 사용
-	/*cv::Mat input(cv::Size(3, 3), CV_32FC1);
-	cv::Mat k(cv::Size(3, 3), CV_32FC1);
+	/*cv::Mat input(cv::Size(3, 3), CV_64FC1);
+	cv::Mat k(cv::Size(3, 3), CV_64FC1);
 	std::vector<std::pair<int, int>> vec;
 	for (int i = 0; i < 9; i++) {
 		vec.push_back(std::pair<int, int>());

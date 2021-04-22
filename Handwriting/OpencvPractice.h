@@ -8,9 +8,9 @@
 //CV_16U	unsigned short (65572)
 //CV_16S	signed shor (-32768~32767)
 //CV_32S	int
-//CV_32F	float
+//CV_32F	double
 //CV_64F	double
-//CV_16F	float16_t (-32768~32767)
+//CV_16F	double16_t (-32768~32767)
 
 //Opencv 테스트 클래스
 class OpencvPractice
@@ -29,7 +29,7 @@ public:
 	void ImagePrint(cv::String);
 
 	void Camera_In();
-	void Video_In(cv::String, float = 0.25f);
+	void Video_In(cv::String, double = 0.25f);
 	void Camera_In_Video_Out(cv::String = "C:\\");
 
 	//---------------------------------

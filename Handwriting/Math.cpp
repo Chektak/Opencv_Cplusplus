@@ -66,8 +66,8 @@ void Math::Convolution(cv::InputArray _Input, cv::OutputArray _Output, const cv:
 		for (int x = 0; x < output.cols; x ++) {
 			for (int ky = 0; ky < kernel.rows; ky++) {
 				for (int kx = 0; kx < kernel.cols; kx++) {
-					output.at<float>(y, x) += kernel.at<float>(ky, kx)
-						* zeroPaddingMat.at<float>(y * stride.height + ky, x * stride.width + kx);
+					output.at<double>(y, x) += kernel.at<double>(ky, kx)
+						* zeroPaddingMat.at<double>(y * stride.height + ky, x * stride.width + kx);
 				}
 			}
 		}
@@ -80,8 +80,8 @@ void Math::Relu(cv::InputArray _Input, cv::OutputArray _Output)
 	cv::Mat output = _Output.getMat();
 	for (int y = 0; y < output.rows; y++) {
 		for (int x = 0; x < output.cols; x++) {
-			if(output.at<float>(y, x) < 0)
-				output.at<float>(y, x) = 0;
+			if(output.at<double>(y, x) < 0)
+				output.at<double>(y, x) = 0;
 		}
 	}
 }
@@ -91,8 +91,8 @@ void Math::MaxPooling(cv::InputArray _Input, cv::OutputArray _Output, const cv::
 	cv::Mat zeroPaddingMat = _Input.getMat();
 
 	//제로 패딩 행렬이 유효하지 않은지 검사(풀링 성립 유무)
-	float outputHeight = (float)(zeroPaddingMat.rows - poolSize.height) / stride.height + 1;
-	float outputWidth = (float)(zeroPaddingMat.cols - poolSize.width) / stride.width + 1;
+	double outputHeight = (double)(zeroPaddingMat.rows - poolSize.height) / stride.height + 1;
+	double outputWidth = (double)(zeroPaddingMat.cols - poolSize.width) / stride.width + 1;
 	//std::cout << "풀링 함수 안에서 input size :\n" << outputWidth << std::endl<< outputHeight << std::endl;
 
 	if (outputHeight != (int)outputHeight
@@ -108,19 +108,19 @@ void Math::MaxPooling(cv::InputArray _Input, cv::OutputArray _Output, const cv::
 	
 	/*std::cout << "풀링 연산 전 input :\n" << zeroPaddingMat << std::endl;
 	std::cout << "풀링 연산 전 output :\n" << output << std::endl;
-	std::cout << output.at<float>(0, 0) << std::endl;*/
+	std::cout << output.at<double>(0, 0) << std::endl;*/
 	//제로 패딩 행렬과 커널로 교차 상관 연산 후, 연산 결과를 output 행렬에 저장
 	for (int y = 0; y < output.rows; y++) {
 		for (int x = 0; x < output.cols; x++) {
-			float maxValue = 0;
+			double maxValue = 0;
 			for (int ky = 0; ky < poolSize.height; ky++) {
 				for (int kx = 0; kx < poolSize.width; kx++) {
-					if (maxValue < zeroPaddingMat.at<float>(y * stride.height + ky, x * stride.width + kx))
-						maxValue = zeroPaddingMat.at<float>(y * stride.height + ky, x * stride.width + kx);
+					if (maxValue < zeroPaddingMat.at<double>(y * stride.height + ky, x * stride.width + kx))
+						maxValue = zeroPaddingMat.at<double>(y * stride.height + ky, x * stride.width + kx);
 				}
 			}
 			//std::cout << maxValue << std::endl;
-			output.at<float>(y, x) = maxValue;
+			output.at<double>(y, x) = maxValue;
 		}
 	}
 }
@@ -143,8 +143,8 @@ void Math::GetMaxPoolingFilter(cv::InputArray _PoolInput, cv::OutputArray _PoolF
 			bool findFlag = false;
 			for (int ky = 0; ky < poolSize.height && findFlag == false; ky++) {
 				for (int kx = 0; kx < poolSize.width; kx++) {
-					if (poolResult.at<float>(y,x) == poolInput.at<float>(y * stride.height + ky, x * stride.width + kx)) {
-						poolFilter.at<float>(y * stride.height + ky, x * stride.width + kx) = 1;
+					if (poolResult.at<double>(y,x) == poolInput.at<double>(y * stride.height + ky, x * stride.width + kx)) {
+						poolFilter.at<double>(y * stride.height + ky, x * stride.width + kx) = 1;
 						findFlag = true;
 						break;
 					}
@@ -243,32 +243,35 @@ void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<i
 }
 
 
-void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
+void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, float learningRate)
 {
-	cv::Mat zeroPaddingMat = _Input.getMat();
+	cv::Mat zeroPaddingMat = _ConvZeroPadInput.getMat();
 	const int filterRows = _Kernel.size().height;
 	const int filterCols = _Kernel.size().width;
-	//입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
+	//합성곱 입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
 	if ((zeroPaddingMat.rows - filterRows) / stride.height + 1 != _Input.getMat().rows
 		|| (zeroPaddingMat.cols - filterCols) / stride.width + 1 != _Input.getMat().cols) {
 		//합성곱 함수 결과와 같은 크기가 되도록 제로패딩 추가
-		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, zeroPaddingMat.size(), cv::Size(filterCols, filterRows), stride);
+		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, _Input.getMat().size(), cv::Size(filterCols, filterRows), stride);
+		std::cout << "ConvKBackprop 예기치 않은 입력 : 합성곱 입력을 자동으로 제로패딩했습니다. :\n"<<zeroPaddingMat << std::endl;
 	}
-	std::cout << "제로패딩됨 :\n"<<zeroPaddingMat << std::endl;
+	cv::Mat input = _Input.getMat();
 	cv::Mat kernel = _Kernel.getMat();
 	
 	//_Kernel.copyTo(_Output);
-	_Output.create(_Kernel.size(), CV_32FC1);
+	_Output.create(_Kernel.size(), CV_64FC1);
 	_Output.setTo(0);
 	cv::Mat kOutput = _Output.getMat();
 
 	std::cout << "커널 업데이트" << std::endl;
 	//소수점 4자리까지 출력
 	std::cout << std::fixed;
-	std::cout.precision(4);
+	std::cout.precision(0);
 	//input행렬의 크기는 합성곱이 세임 패딩으로 진행되기에 합성곱 결과 행렬과 같은 크기
 	for (int iY = 0; iY < _Input.size().height; iY++) {
 		for (int iX = 0; iX < _Input.size().width; iX++) {
+			if (input.at<double>(iY, iX) == 0)
+				continue;
 			//합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
 			int fIndex = iY * _Input.size().width + iX;
 
@@ -278,25 +281,23 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 			int fXEnd = _ConvFilter[fIndex].second % kernel.cols;
 			for (int fY = fYStart; fY <= fYEnd; fY++) {
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
-					if(!(zeroPaddingMat.at<float>(iY + fY, iX + fX) < 0.0001 && zeroPaddingMat.at<float>(iY + fY, iX + fX) > -0.0001))
-						std::cout << "K" << fY * kernel.cols + fX << "+=" << zeroPaddingMat.at<float>(iY + fY, iX + fX) << "\n";
+					//std::cout << "K" << fY * kernel.cols + fX << "+=" << input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX) << "|";
 					//Kernel 업데이트
-					kOutput.at<float>(fY, fX) += zeroPaddingMat.at<float>(iY + fY, iX + fX);
+					kOutput.at<double>(fY, fX) += learningRate *input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX);
 				}
 			}
 			//std::cout << std::endl;
 		}
 	}
-			std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	kOutput += _Kernel.getMat();
-			std::cout << "커널 업데이트 후 : \n"<<kOutput << std::endl;
 
 }
 
 void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
 {
 	cv::Mat input = _Input.getMat();
-	cv::Mat sample = cv::Mat(input.size(), CV_32FC1);
+	cv::Mat sample = cv::Mat(input.size(), CV_64FC1);
 	sample.setTo(0);
 	
 	cv::Mat kernel = _Kernel.getMat();
@@ -309,7 +310,7 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 				//Kernel 업데이트
 				//std::cout << (int)f / kernel.cols << "," << f % kernel.cols << "요소" << std::endl;
 
-				sample.at<float>(iY, iX) += kernel.at<float>((int)f / kernel.cols, f % kernel.cols);
+				sample.at<double>(iY, iX) += kernel.at<double>((int)f / kernel.cols, f % kernel.cols);
 			}
 		}
 	}
@@ -334,7 +335,7 @@ void Math::SoftMax(cv::InputArray _Input, cv::OutputArray _Output)
 	cv::Mat output = _Output.getMat();
 
 	long double sum = 0;
-	float max = 0;
+	double max = 0;
 
 	//softmax가 무한대로 발산하지 않게 max를 구해 예외처리한다.
 	//https://leedakyeong.tistory.com/entry/밑바닥부터-시작하는-딥러닝-소프트맥스-함수-구현하기-in-파이썬-softmax-in-python
@@ -343,12 +344,12 @@ void Math::SoftMax(cv::InputArray _Input, cv::OutputArray _Output)
 		max = 0;
 		//열에 대한 max를 구한다
 		for (int x = 0; x < input.cols; x++) {
-			if (max < input.at<float>(y, x))
-				max = input.at<float>(y, x);
+			if (max < input.at<double>(y, x))
+				max = input.at<double>(y, x);
 		}
 		for (int x = 0; x < input.cols; x++) {
-			output.at<float>(y, x) = exp(input.at<float>(y, x) - max);
-			sum += output.at<float>(y, x);
+			output.at<double>(y, x) = exp(input.at<double>(y, x) - max);
+			sum += output.at<double>(y, x);
 		}
 		output.row(y) /= sum;
 	}

@@ -26,7 +26,7 @@ namespace Math {
     void GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<int, int>>* _Output, cv::InputArray k, const cv::Size& stride);
     
     //합성곱 필터를 활용해 커널 행렬에 대응하는 (Input 행렬 요소 * 합성곱 입력 행렬 요소)를 더한 후 반환
-    void ConvKBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride);
+    void ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput,cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride,float learningRate);
 
     //합성곱 필터를 활용해 합성곱 입력 행렬 요소에 대응하는 커널 행렬 요소를 전부 더하고, 행렬로 샘플링해 Input 행렬과 벡터곱 후 반환
     void ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride);

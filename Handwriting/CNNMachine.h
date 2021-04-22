@@ -58,11 +58,11 @@ public:
 	double lossAverage;
 	double cost;
 public:
+	void Training(int epoch, double learningRate, double l2);
 	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);
 	//정방향 계산
 	void ForwardPropagation();
-	void BackPropagation(float learningRate);
-	void Training(int epoch, float learningRate, float l2);
+	void BackPropagation(double learningRate);
 
 };
 

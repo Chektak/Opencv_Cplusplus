@@ -21,8 +21,8 @@ void OpencvPractice::ImgInfoPrint(cv::String imgPath)
 		std::cout << "" << std::endl;
 	}
 
-	float data[] = { 2.f, 1.414f, 3.f, 1.732f };
-	cv::Mat mat1(2, 2, CV_32FC1, data);
+	double data[] = { 2.f, 1.414f, 3.f, 1.732f };
+	cv::Mat mat1(2, 2, CV_64FC1, data);
 	std::cout << "mat1:\n" << mat1 << std::endl;
 }
 void OpencvPractice::RandomImage(cv::String imgPath = "Resource/Image/lenna.bmp")
@@ -69,14 +69,14 @@ void OpencvPractice::MatOp1()
 	cv::Mat mat2 = cv::Mat::ones(3, 3, CV_32SC1);
 	cv::Mat mat3 = cv::Mat::eye(3, 3, CV_32SC1);
 
-	float data[] = { 1, 2,3,4,5,6 };
-	cv::Mat mat4(2, 3, CV_32FC1, data);
+	double data[] = { 1, 2,3,4,5,6 };
+	cv::Mat mat4(2, 3, CV_64FC1, data);
 
-	cv::Mat mat5 = (cv::Mat_<float>(2, 3) << 1, 2, 3, 4, 5, 6);
+	cv::Mat mat5 = (cv::Mat_<double>(2, 3) << 1, 2, 3, 4, 5, 6);
 	cv::Mat mat6 = cv::Mat_<uchar>({ 2,3 }, { 1,2,3,4,5,6 });
 
 	mat4.create(256, 256, CV_8UC3);
-	mat5.create(4, 4, CV_32FC1);
+	mat5.create(4, 4, CV_64FC1);
 
 	mat4 = cv::Scalar(255, 0, 0);
 	mat5.setTo(1.f);
@@ -132,7 +132,7 @@ void OpencvPractice::Camera_In()
 	cv::destroyAllWindows();
 }
 
-void OpencvPractice::Video_In(cv::String videoPath, float winScale)
+void OpencvPractice::Video_In(cv::String videoPath, double winScale)
 {
 	cv::VideoCapture cap(videoPath);
 	
