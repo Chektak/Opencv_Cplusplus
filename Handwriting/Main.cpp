@@ -51,7 +51,7 @@ int main() {
 	CNNMachine cnn;
 	cnn.Init(trainingVec, labelVec);
 
-	cnn.Training(1, 1, 1);
+	cnn.Training(1000, 0.001, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트

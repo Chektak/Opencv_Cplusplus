@@ -176,7 +176,6 @@ void Math::MaxPoolingBackprop(cv::InputArray _Input, cv::OutputArray _Output, cv
 void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<int, int>>* _Output, cv::InputArray k, const cv::Size& stride)
 {
 	cv::Mat input = _Input.getMat();
-	cv::Mat zeroPaddingMat = _Input.getMat();
 	cv::Mat kernel = k.getMat();
 
 	//제로 패딩 행렬 생성 시뮬레이션으로 zeroPaddingMatrix에 대한 inputMatrix Offset을 얻는다
@@ -212,9 +211,9 @@ void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<i
 		oW = (int)((input.cols + 2 * p - k.size().width) / stride.width) + 1;
 	}
 	
-	//std::cout << "합성곱 출력 행렬" << std::endl;
 	int stX, stY, edX, edY;
 
+	//std::cout << "커널 기준" << input.size() << "크기의 입력 행렬 합성곱 범위 출력 : " << std::endl;
 	//세임 패딩 연산이므로 input Matrix Size = output Matrix Size
 	for (int outputY = 0; outputY < input.rows; outputY++) {
 		for (int outputX = 0; outputX < input.cols; outputX++) {
@@ -237,72 +236,85 @@ void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<i
 			//end좌표
 			_Output->at((unsigned long long)outputY * input.cols + outputX).second = (edY)*k.size().width + (edX);
 
-			//std::cout << outputX << ", " << outputY << " 좌표의 입력 행렬 합성곱 범위 : " << std::endl;
-			//std::cout << "시작점 : " << stX << ", " << stY << std::endl;
-			//std::cout << "종료점 : " << edX << ", " << edY << std::endl;
+			//std::cout << stX << "," << stY << " "<< edX << "," << edY << "|";
 		}
+		//std::cout << std::endl;
 	}
 }
 
 
-void Math::ConvKBackprop(cv::InputArray _Input, cv::OutputArray _Kernel, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
+void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
 {
-	//입력 행렬에 대응하는 필터 요소를 알기 위해
-	//합성곱 함수 입력과 같은 크기가 되도록 Input행렬에 제로패딩 추가
-	//cv::Mat zeroPaddingMat = _Input.getMat();
-	//const int filterRows = _ConvFilter.size();
-	//const int filterCols = _ConvFilter.at(0).size();
-	////입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
-	//if ((zeroPaddingMat.rows - filterRows) / stride.height + 1 != _Input.getMat().rows
-	//	|| (zeroPaddingMat.cols - filterCols) / stride.width + 1 != _Input.getMat().cols) {
-	//	Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, zeroPaddingMat.size(), cv::Size(filterCols, filterRows), stride);
-	//}
+	cv::Mat zeroPaddingMat = _Input.getMat();
+	const int filterRows = _Kernel.size().height;
+	const int filterCols = _Kernel.size().width;
+	//입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
+	if ((zeroPaddingMat.rows - filterRows) / stride.height + 1 != _Input.getMat().rows
+		|| (zeroPaddingMat.cols - filterCols) / stride.width + 1 != _Input.getMat().cols) {
+		//합성곱 함수 결과와 같은 크기가 되도록 제로패딩 추가
+		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, zeroPaddingMat.size(), cv::Size(filterCols, filterRows), stride);
+	}
+	std::cout << "제로패딩됨 :\n"<<zeroPaddingMat << std::endl;
+	cv::Mat kernel = _Kernel.getMat();
+	
+	//_Kernel.copyTo(_Output);
+	_Output.create(_Kernel.size(), CV_32FC1);
+	_Output.setTo(0);
+	cv::Mat kOutput = _Output.getMat();
 
-	////커널 크기와 같은 Output 행렬 생성
-	//_Kernel.create(cv::Size(filterCols, filterRows), CV_32FC1);
-	//_Kernel.setTo(0);
-	//cv::Mat output = _Kernel.getMat();
-	cv::Mat input = _Input.getMat();
-	cv::Mat kOutput = _Kernel.getMat();
-	cv::Mat kernel;
-	_Kernel.copyTo(kernel);
+	std::cout << "커널 업데이트" << std::endl;
+	//소수점 4자리까지 출력
+	std::cout << std::fixed;
+	std::cout.precision(4);
+	//input행렬의 크기는 합성곱이 세임 패딩으로 진행되기에 합성곱 결과 행렬과 같은 크기
+	for (int iY = 0; iY < _Input.size().height; iY++) {
+		for (int iX = 0; iX < _Input.size().width; iX++) {
+			//합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
+			int fIndex = iY * _Input.size().width + iX;
 
-	for (int iY = 0; iY < input.rows; iY++) {
-		for (int iX = 0; iX < input.cols; iX++) {
-			//필터에서 얻은 입력 범위 정보만큼 반복
-			int fIndex = iY * input.cols + iX;
-			for (int f = _ConvFilter[fIndex].first; f < _ConvFilter[fIndex].second; f++) {
-				//Kernel 업데이트
-				//std::cout << (int)f / kernel.cols << "," << f % kernel.cols << "요소" << std::endl;
-				
-				kOutput.at<float>((int)f / kernel.cols, f % kernel.cols) += kernel.at<float>((int)f / kernel.cols, f % kernel.cols) * input.at<float>(iY, iX);
+			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
+			int fXStart = _ConvFilter[fIndex].first % kernel.cols;
+			int fYEnd = (int)(_ConvFilter[fIndex].second / kernel.cols);
+			int fXEnd = _ConvFilter[fIndex].second % kernel.cols;
+			for (int fY = fYStart; fY <= fYEnd; fY++) {
+				for (int fX = fXStart; fX <= fXEnd; fX++) {
+					if(!(zeroPaddingMat.at<float>(iY + fY, iX + fX) < 0.0001 && zeroPaddingMat.at<float>(iY + fY, iX + fX) > -0.0001))
+						std::cout << "K" << fY * kernel.cols + fX << "+=" << zeroPaddingMat.at<float>(iY + fY, iX + fX) << "\n";
+					//Kernel 업데이트
+					kOutput.at<float>(fY, fX) += zeroPaddingMat.at<float>(iY + fY, iX + fX);
+				}
 			}
+			//std::cout << std::endl;
 		}
 	}
+			std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	kOutput += _Kernel.getMat();
+			std::cout << "커널 업데이트 후 : \n"<<kOutput << std::endl;
+
 }
 
 void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
 {
 	cv::Mat input = _Input.getMat();
-	cv::Mat output = cv::Mat(input.size(), CV_32FC1);
-	output.setTo(0);
+	cv::Mat sample = cv::Mat(input.size(), CV_32FC1);
+	sample.setTo(0);
 	
 	cv::Mat kernel = _Kernel.getMat();
 
 	for (int iY = 0; iY < input.rows; iY++) {
 		for (int iX = 0; iX < input.cols; iX++) {
-			//필터에서 얻은 입력 범위 정보만큼 반복
+			//합성곱 필터를 활용해 합성곱 입력 행렬 요소에 대응하는 커널 행렬 요소를 전부 더한다
 			int fIndex = iY * input.cols + iX;
-			for (int f = _ConvFilter[fIndex].first; f < _ConvFilter[fIndex].second; f++) {
+			for (int f = _ConvFilter[fIndex].first; f <= _ConvFilter[fIndex].second; f++) {
 				//Kernel 업데이트
 				//std::cout << (int)f / kernel.cols << "," << f % kernel.cols << "요소" << std::endl;
 
-				output.at<float>(iY, iX) += kernel.at<float>((int)f / kernel.cols, f % kernel.cols) * input.at<float>(iY, iX);
+				sample.at<float>(iY, iX) += kernel.at<float>((int)f / kernel.cols, f % kernel.cols);
 			}
 		}
 	}
-	output = output.mul(input);
-	output.copyTo(_Output);
+	sample = sample.mul(input);
+	sample.copyTo(_Output);
 }
 
 void Math::NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w)

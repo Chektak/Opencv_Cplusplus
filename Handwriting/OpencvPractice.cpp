@@ -253,8 +253,8 @@ void OpencvPractice::MatPrint(std::vector<cv::Mat>& trainingVec, std::vector<cv:
 		imshow("Window", trainingVec[i]);
 		//std::cout << i << "번째 이미지 정답 : " << (int)labelVec[i] <<std::endl;
 		//아무 키나 누르면 다음
-		if (cv::waitKey(0) != -1)
-			continue;
+		/*if (cv::waitKey(0) != -1)
+			continue;*/
 	}
 }
 

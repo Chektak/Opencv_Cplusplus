@@ -28,6 +28,8 @@ public:
 	std::vector<std::vector<cv::Mat>> poolresult2;//풀링층 2 결과
 	cv::Size poolSize;
 	cv::Size poolStride;
+	cv::Size pool1ResultSize;
+	cv::Size pool2ResultSize;
 
 	//정방향 완전연결신경망 계산 시 사용하는 행렬들
 	cv::Mat xMat;//poolresult2를 신경망 입력으로 펼친 형태
@@ -54,11 +56,12 @@ public:
 
 	
 	double lossAverage;
+	double cost;
 public:
 	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);
 	//정방향 계산
 	void ForwardPropagation();
-	void BackPropagation();
+	void BackPropagation(float learningRate);
 	void Training(int epoch, float learningRate, float l2);
 
 };
