@@ -12,12 +12,17 @@
 #include <random>
 //#include <time.h>
 
+//int USEDATA_NUM = 5;
+//int KERNEL1_NUM = 4;
+//int KERNEL2_NUM = 8;
+#define USEDATA_NUM 10
+#define KERNEL1_NUM 2
+#define KERNEL2_NUM 4
+//숫자 0~9를 분류하므로 클래스 분류 수는 10개
+#define CLASSIFICATIONNUM 10
+
 #include "Math.h" 
 #include "OpencvPractice.h"
 #include "CNNMachine.h"
 
-#define USEDATA_NUM 3
-#define KERNEL1_NUM 1
-#define KERNEL2_NUM 5
-//숫자 0~9를 분류하므로 클래스 분류 수는 10개
-#define CLASSIFICATIONNUM 10
+

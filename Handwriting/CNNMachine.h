@@ -5,6 +5,7 @@ class CNNMachine
 {
 public:
 	//훈련 데이터 순서 : 데이터 수, 행렬
+	//(채널 수는 흑백 이미지 입력만을 가정하므로 생략)
 	std::vector<cv::Mat> trainingMats; //=x1Mats
 	std::vector<cv::Mat> x1ZeroPaddingMats;//합성곱층 1 입력
 
@@ -54,7 +55,10 @@ public:
 	std::vector<std::pair<int, int>> conv1BackpropFilters;
 	std::vector<std::pair<int, int>> conv2BackpropFilters;
 
-	
+	cv::Mat yLoss; 
+	cv::Mat wT;
+	cv::Mat yLossW;
+
 	double lossAverage;
 	double cost;
 public:

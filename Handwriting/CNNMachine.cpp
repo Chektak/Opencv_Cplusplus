@@ -21,7 +21,18 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		std::cout << "코스트 : " << cost << std::endl;
 
 		//아무키나 누르면 다음
-		if (cv::waitKey(0) != -1) {
+		int key = cv::waitKey(0);
+		if (key != -1) {
+			if (key == 13) //enter키
+			{
+				std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
+				std::cout << "yMat(정답 행렬) : " << std::endl;
+				std::cout << yMat << std::endl;
+				std::cout << "yHatMat(가설 행렬) : " << std::endl;
+				std::cout << yHatMat << std::endl;
+				std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
+				std::cout << yLoss << std::endl;
+			}
 			std::cout << "역방향 계산" << std::endl;
 			BackPropagation(learningRate);
 			continue;
@@ -201,21 +212,15 @@ void CNNMachine::ForwardPropagation()
 
 void CNNMachine::BackPropagation(double learningRate)
 {
-	cv::Mat yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
-	cv::Mat wT = wMat.t();
-	cv::Mat yLossW = yLoss*wT; //손실 함수를 완전연결층 W에 대해 미분한 값
+	yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+	wT = wMat.t();
+	yLossW = yLoss*wT; //손실 함수를 완전연결층 W에 대해 미분한 값
 	std::vector<std::vector<cv::Mat>> yLossWTemp; //yLossW를 풀링2결과행렬의 크기로 차원 변환
 
 	std::vector<std::vector<cv::Mat>> yLossWUpRelu2; //손실 함수를 합성곱2 결과에 대해 미분한 값 (Up은 Up-Sampleling(풀링함수의 미분) 약자)
 	std::vector<std::vector<cv::Mat>> yLossWUpRelu2P1UpRelu; //손실 함수를 합성곱1 결과에 대해 미분한 값
 
-	std::cout << "정방향 계산에서 밑의 yMat, yHatMat, yLoss로 역방향 계산 " << std::endl;
-	std::cout << "yMat : " << std::endl;
-	std::cout << yMat << std::endl;
-	std::cout << "yHatMat : " << std::endl;
-	std::cout << yHatMat << std::endl;
-	std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
-	std::cout << yLoss << std::endl;
+
 	//벡터곱을 위해 yLossW를 풀링2 결과 행렬 크기로 변환
 	for (int i = 0; i < trainingMats.size(); i++) {
 		yLossWTemp.push_back(std::vector<cv::Mat>());
@@ -228,7 +233,7 @@ void CNNMachine::BackPropagation(double learningRate)
 	
 	//std::cout << wT << std::endl;
 
-	//차원 변환된 yLossW를 풀링 필터로 Up-Sampleling 후 Relu(Conv2)행렬과 벡터곱
+	//차원 변환된 yLossW를 풀링2 필터로 Up-Sampleling 후 Relu(Conv2)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		yLossWUpRelu2.push_back(std::vector<cv::Mat>());
 		for (int k2n = 0; k2n < KERNEL2_NUM; k2n++) {
@@ -254,73 +259,55 @@ void CNNMachine::BackPropagation(double learningRate)
 	Math::GetConvBackpropFilters(poolresult1[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
 	//커널1 역방향 계산을 위한 합성곱1 필터 계산
 	Math::GetConvBackpropFilters(trainingMats[0], &conv1BackpropFilters, kernels1[0][0], kernel1Stride);
-//
-//#pragma region 합성곱층1 가중치 행렬(커널1) 역방향 계산
-//	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-//		//yLossWUpRelu2P1.push_back(std::vector<cv::Mat>());
-//		yLossWUpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
-//		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
-//			for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
-//				
-//			}
-//		}
-//		//커널 2 채널 수만큼 반복
-//		for (int k2c = 0; k2c < kernels2.size(); k2c++) {
-//			//커널 2 개수만큼 반복
-//			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
-//				yLossWUpRelu2P1UpRelu[x1i].push_back(cv::Mat());
-//				//yLossWUpRelu2P1[x1i].push_back(cv::Mat()); 
-//				cv::Mat yLossWUpRelu2P1;
-//				Math::ConvXBackprop(yLossWUpRelu2[x1i][k2n], kernels2[k2c][k2n], yLossWUpRelu2P1, conv2BackpropFilters, kernel2Stride);
-//				
-//				//Pooling 함수 역방향 계산
-//				Math::GetMaxPoolingFilter(conv1ZeroPaddingMats[x1i][k2c], pool1BackpropFilters[x1i][k2c], poolresult1[x1i][k2c], poolSize, poolStride);
-//				//풀링 필터로 업샘플링
-//				Math::MaxPoolingBackprop(yLossWUpRelu2P1, yLossWUpRelu2[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolSize, poolStride);
-//				//Relu 함수 역방향 계산
-//				//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
-//				//Math::Relu(conv1Mats[x1i][k2c], conv2Mats[x1i][k2c]);
-//				
-//			}
-//		}
-//
-//		//커널 1 채널 수만큼 반복
-//		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
-//			//합성곱을 커널에 대해 미분 (커널 필터 얻기)
-//			std::cout << "합성곱1 입력 행렬 크기 : " << trainingMats[x1i].size() << ", 합성곱1 제로패딩 입력 행렬 크기 : " << x1ZeroPaddingMats[x1i].size() <<  ", 필터 행렬 크기 : " << conv1BackpropFilters.size() << std::endl;
-//			
-//
-//			//for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
-//			//	cv::Mat kTemp;
-//			//	//Math::ConvKBackprop(yLossWTemp[x1i][k2i], kTemp, conv2BackpropFilters[x1i][k1i], kernel2Stride);
-//			//	std::cout << kTemp << std::endl;
-//			//	kernels2[k1i][k2i] -= kTemp;
-//			//}
-//		}
-//	}
-//#pragma endregion
+
+	//yLossWUpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱하고, 풀링1 필터로 Up-Sampleling 후 Relu(Conv1)행렬과 벡터곱
+	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+		yLossWUpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
+		//커널 1 개수만큼 반복
+		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+			yLossWUpRelu2P1UpRelu[x1i].push_back(cv::Mat());
+			cv::Mat yLossWUpRelu2P1;
+
+			//커널 2 개수만큼 반복
+			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
+				//yLossWUpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱
+				Math::ConvXBackprop(yLossWUpRelu2[x1i][k2n], kernels2[k1n][k2n], yLossWUpRelu2P1, conv2BackpropFilters, kernel1Stride, learningRate);
+			}
+			//Pooling 함수 역방향 계산으로 풀링 필터 정의
+			Math::GetMaxPoolingFilter(conv1ZeroPaddingMats[x1i][k1n], pool1BackpropFilters[x1i][k1n], poolresult1[x1i][k1n], poolSize, poolStride);
+			//풀링 필터로 업샘플링
+			Math::MaxPoolingBackprop(yLossWUpRelu2P1, yLossWUpRelu2P1UpRelu[x1i][k1n], pool1BackpropFilters[x1i][k1n], poolSize, poolStride);
+
+			//Relu 함수 역방향 계산
+			//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
+			//Math::Relu(conv1Mats[x1i][k1n], conv1Mats[x1i][k1n]);
+			yLossWUpRelu2P1UpRelu[x1i][k1n] = yLossWUpRelu2P1UpRelu[x1i][k1n].mul(conv1Mats[x1i][k1n]);
+		}
+	}
+#pragma region 합성곱층1 가중치 행렬(커널1) 역방향 계산
+	//std::cout << "\n커널 1 역방향 계산 " << std::endl;
+	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
+			for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+				cv::Mat newKernel;
+				Math::ConvKBackprop(-yLossWUpRelu2P1UpRelu[x1i][k1n], x1ZeroPaddingMats[x1i], kernels1[k1c][k1n], newKernel, conv1BackpropFilters, kernel1Stride, learningRate);
+				newKernel.copyTo(kernels1[k1c][k1n]);
+				//std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels1[k1c][k1n] << std::endl;
+			}
+		}
+	}
+#pragma endregion
 
 #pragma region 합성곱층2 가중치 행렬(커널2) 역방향 계산
+	//std::cout << "\n커널 2 역방향 계산 " << std::endl;
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		//커널 2 채널 수만큼 반복
 		for (int k2c = 0; k2c < kernels2.size(); k2c++) {
-			//합성곱을 커널에 대해 미분 (커널 필터 얻기)
-			//std::cout << "합성곱2 입력 행렬 크기 : " << poolresult1[x1i][k2c].size() << "," << "필터 행렬 크기 : " << conv2BackpropFilters.size() << std::endl;
-			//std::cout << "역방향 행렬 크기 : " << yLossWUpRelu2[x1i][0].size() << std::endl;
 			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
-				//std::cout << "역방향 행렬 업데이트 전 : " << kernels2[k2c][k2n] << std::endl;
-
-				/*cv::Mat newInput = yLossWUpRelu2[x1i][k2n].mul(poolresult1[x1i][k2n]);
-				std::cout << yLossWUpRelu2[x1i][k2n] << std::endl;
-				std::cout << poolresult1ZeroPadding[0][0] << std::endl;*/
-
 				cv::Mat newKernel;
 
-				//std::cout << "풀링결과1 제로패딩" << std::endl;
-				//std::cout << poolresult1ZeroPadding[x1i][k2c] << std::endl;
 				Math::ConvKBackprop(-yLossWUpRelu2[x1i][k2n], poolresult1ZeroPadding[x1i][k2c], kernels2[k2c][k2n],newKernel, conv2BackpropFilters, kernel2Stride, learningRate);
 				newKernel.copyTo(kernels2[k2c][k2n]);
-				std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels2[k2c][k2n] << std::endl;
+				//std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels2[k2c][k2n] << std::endl;
 			}
 		}
 	}

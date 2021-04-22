@@ -43,6 +43,14 @@ int main() {
 	std::cout << "풀링 연산 후 :\n" << out << std::endl;*/
 	
 	//read MNIST iamge into OpenCV Mat vector
+	
+	//std::cout << "사용할 훈련 데이터 수를 입력해주세요." << std::endl;
+	//std::cin >> USEDATA_NUM;
+	//std::cout << "사용할 커널1 수를 입력해주세요." << std::endl;
+	//std::cin >> KERNEL1_NUM;
+	//std::cout << "사용할 커널2 수를 입력해주세요." << std::endl;
+	//std::cin >> KERNEL2_NUM;
+
 	std::vector<cv::Mat> trainingVec;
 	std::vector<uchar> labelVec;
 	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
@@ -51,7 +59,7 @@ int main() {
 	CNNMachine cnn;
 	cnn.Init(trainingVec, labelVec);
 
-	cnn.Training(1000, 0.00001, 1);
+	cnn.Training(1000, 0.0000005, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트

@@ -263,7 +263,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 	_Output.setTo(0);
 	cv::Mat kOutput = _Output.getMat();
 
-	std::cout << "커널 업데이트" << std::endl;
+	//std::cout << "커널 업데이트" << std::endl;
 	//소수점 4자리까지 출력
 	std::cout << std::fixed;
 	std::cout.precision(0);
@@ -289,33 +289,44 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 			//std::cout << std::endl;
 		}
 	}
-	std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	kOutput += _Kernel.getMat();
-
 }
 
-void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
+void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, float learningRate)
 {
 	cv::Mat input = _Input.getMat();
-	cv::Mat sample = cv::Mat(input.size(), CV_64FC1);
-	sample.setTo(0);
-	
 	cv::Mat kernel = _Kernel.getMat();
 
-	for (int iY = 0; iY < input.rows; iY++) {
-		for (int iX = 0; iX < input.cols; iX++) {
-			//합성곱 필터를 활용해 합성곱 입력 행렬 요소에 대응하는 커널 행렬 요소를 전부 더한다
-			int fIndex = iY * input.cols + iX;
-			for (int f = _ConvFilter[fIndex].first; f <= _ConvFilter[fIndex].second; f++) {
-				//Kernel 업데이트
-				//std::cout << (int)f / kernel.cols << "," << f % kernel.cols << "요소" << std::endl;
+	//_Kernel.copyTo(_Output);
+	_Output.create(input.size(), CV_64FC1);
+	_Output.setTo(0);
+	cv::Mat output = _Output.getMat();
 
-				sample.at<double>(iY, iX) += kernel.at<double>((int)f / kernel.cols, f % kernel.cols);
+	//소수점 4자리까지 출력
+	std::cout << std::fixed;
+	std::cout.precision(0);
+	//input행렬의 크기는 합성곱이 세임 패딩으로 진행되기에 합성곱 결과 행렬과 같은 크기
+	for (int iY = 0; iY < _Input.size().height; iY++) {
+		for (int iX = 0; iX < _Input.size().width; iX++) {
+			if (input.at<double>(iY, iX) == 0)
+				continue;
+			//합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
+			int fIndex = iY * _Input.size().width + iX;
+
+			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
+			int fXStart = _ConvFilter[fIndex].first % kernel.cols;
+			int fYEnd = (int)(_ConvFilter[fIndex].second / kernel.cols);
+			int fXEnd = _ConvFilter[fIndex].second % kernel.cols;
+			for (int fY = fYStart; fY <= fYEnd; fY++) {
+				for (int fX = fXStart; fX <= fXEnd; fX++) {
+					//std::cout << "K" << fY * kernel.cols + fX << "+=" << input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX) << "|";
+					output.at<double>(iY, iX) += learningRate * input.at<double>(iY, iX) * kernel.at<double>(fY, fX);
+				}
 			}
+			//std::cout << std::endl;
 		}
 	}
-	sample = sample.mul(input);
-	sample.copyTo(_Output);
 }
 
 void Math::NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w)
