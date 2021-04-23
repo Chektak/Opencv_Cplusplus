@@ -283,13 +283,14 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
 					//std::cout << "K" << fY * kernel.cols + fX << "+=" << input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX) << "|";
 					//Kernel 업데이트
-					kOutput.at<double>(fY, fX) += learningRate *input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX);
+					kOutput.at<double>(fY, fX) += input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX);
 				}
 			}
 			//std::cout << std::endl;
 		}
 	}
-	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	kOutput *= learningRate;
+	std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	kOutput += _Kernel.getMat();
 }
 

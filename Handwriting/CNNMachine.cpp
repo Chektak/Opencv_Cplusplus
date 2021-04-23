@@ -1,4 +1,4 @@
-#include "CNNMachine.h"
+﻿#include "CNNMachine.h"
 
 void CNNMachine::Training(int epoch, double learningRate, double l2)
 {
@@ -57,13 +57,13 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	kernels1.push_back(std::vector<cv::Mat>());
 	for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
 		kernels1[0].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
-		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
+		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(100));
 
 		kernels2.push_back(std::vector<cv::Mat>());
 		//커널 2는 채널이 커널 1의 개수
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
 			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
-			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
+			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(100));
 		}
 		
 		
@@ -266,17 +266,9 @@ void CNNMachine::BackPropagation(double learningRate)
 		//커널 1 개수만큼 반복
 		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
 			yLossWUpRelu2P1UpRelu[x1i].push_back(cv::Mat());
-/*cv::Mat yLossWUpRelu2P1;
 
-			//커널 2 개수만큼 반복
-			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
-				//yLossWUpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱
-				Math::ConvXBackprop(yLossWUpRelu2[x1i][k2n], kernels2[k1n][k2n], yLossWUpRelu2P1, conv2BackpropFilters, kernel1Stride, learningRate);
-			}
-*/
-
-			cv::Mat yLossWUpRelu2P1 = cv::Mat(yLossWUpRelu2[x1i][k2n].size, CV_64FC1);
-yLossWUpRelu2P1.setTo(0);
+			cv::Mat yLossWUpRelu2P1 = cv::Mat(yLossWUpRelu2[x1i][k1n].size(), CV_64FC1);
+			yLossWUpRelu2P1.setTo(0);
 
 			//커널 2 개수만큼 반복
 			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
@@ -304,7 +296,7 @@ cv::Mat k2Temp;
 				cv::Mat newKernel;
 				Math::ConvKBackprop(-yLossWUpRelu2P1UpRelu[x1i][k1n], x1ZeroPaddingMats[x1i], kernels1[k1c][k1n], newKernel, conv1BackpropFilters, kernel1Stride, learningRate);
 				newKernel.copyTo(kernels1[k1c][k1n]);
-				//std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels1[k1c][k1n] << std::endl;
+				std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels1[k1c][k1n] << std::endl;
 			}
 		}
 	}
@@ -319,7 +311,7 @@ cv::Mat k2Temp;
 
 				Math::ConvKBackprop(-yLossWUpRelu2[x1i][k2n], poolresult1ZeroPadding[x1i][k2c], kernels2[k2c][k2n],newKernel, conv2BackpropFilters, kernel2Stride, learningRate);
 				newKernel.copyTo(kernels2[k2c][k2n]);
-				//std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels2[k2c][k2n] << std::endl;
+				std::cout << "커널 역방향 행렬 업데이트 후 : " << kernels2[k2c][k2n] << std::endl;
 			}
 		}
 	}
