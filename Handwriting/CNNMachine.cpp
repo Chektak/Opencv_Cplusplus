@@ -4,13 +4,13 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 {
 	for (int i = 0; i < epoch; i++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
-		std::cout << i<<"¹øÂ° ÈÆ·Ã" << std::endl;
-		std::cout << "Á¤¹æÇâ °è»ê" << std::endl;
+		std::cout << i<<"ë²ˆì§¸ í›ˆë ¨" << std::endl;
+		std::cout << "ì •ë°©í–¥ ê³„ì‚°" << std::endl;
 		ForwardPropagation();
 		cost = 0;
 		for (int y = 0; y < yMat.rows; y++) {
 			for (int x = 0; x < yMat.cols; x++) {
-				//log(0) À½ÀÇ ¹«ÇÑ´ë ¿¹¿ÜÃ³¸®·Î 0 ´ë½Å 0¿¡ °¡±î¿î ¼ö »ç¿ë
+				//log(0) ìŒì˜ ë¬´í•œëŒ€ ì˜ˆì™¸ì²˜ë¦¬ë¡œ 0 ëŒ€ì‹  0ì— ê°€ê¹Œìš´ ìˆ˜ ì‚¬ìš©
 				cost += yMat.at<double>(y, x) * log((yHatMat.at<double>(y, x) == 0) ? 0.00000000001 : yHatMat.at<double>(y, x));
 			}
 		}
@@ -18,22 +18,22 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		cost *= -1;
 		//std::cout << i<<"yMat : " << yMat << std::endl;
 		//std::cout << "yHatMat : " << yHatMat << std::endl;
-		std::cout << "ÄÚ½ºÆ® : " << cost << std::endl;
+		std::cout << "ì½”ìŠ¤íŠ¸ : " << cost << std::endl;
 
-		//¾Æ¹«Å°³ª ´©¸£¸é ´ÙÀ½
+		//ì•„ë¬´í‚¤ë‚˜ ëˆ„ë¥´ë©´ ë‹¤ìŒ
 		int key = cv::waitKey(0);
 		if (key != -1) {
-			if (key == 13) //enterÅ°
+			if (key == 13) //enterí‚¤
 			{
-				std::cout << "Á¤¹æÇâ °è»ê¿¡¼­ ¾òÀº yMat, yHatMat, yLoss·Î ¿ª¹æÇâ °è»ê ³¡. " << std::endl;
-				std::cout << "yMat(Á¤´ä Çà·Ä) : " << std::endl;
+				std::cout << "ì •ë°©í–¥ ê³„ì‚°ì—ì„œ ì–»ì€ yMat, yHatMat, yLossë¡œ ì—­ë°©í–¥ ê³„ì‚° ë. " << std::endl;
+				std::cout << "yMat(ì •ë‹µ í–‰ë ¬) : " << std::endl;
 				std::cout << yMat << std::endl;
-				std::cout << "yHatMat(°¡¼³ Çà·Ä) : " << std::endl;
+				std::cout << "yHatMat(ê°€ì„¤ í–‰ë ¬) : " << std::endl;
 				std::cout << yHatMat << std::endl;
 				std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
 				std::cout << yLoss << std::endl;
 			}
-			std::cout << "¿ª¹æÇâ °è»ê" << std::endl;
+			std::cout << "ì—­ë°©í–¥ ê³„ì‚°" << std::endl;
 			BackPropagation(learningRate);
 			continue;
 		}
@@ -44,23 +44,23 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 {
 	for (int i = 0; i < trainingVec.size(); i++) {
 		trainingMats.push_back(cv::Mat());
-		//ucharÇü Çà·Ä ¿ä¼Ò¸¦ doubleÇü Çà·Ä ¿ä¼Ò·Î Å¸ÀÔ Ä³½ºÆÃ
+		//ucharí˜• í–‰ë ¬ ìš”ì†Œë¥¼ doubleí˜• í–‰ë ¬ ìš”ì†Œë¡œ íƒ€ì… ìºìŠ¤íŒ…
 		trainingVec[i].convertTo(trainingMats[i], CV_64FC1);
 	}
 
 	poolStride = cv::Size(2, 2);
 	poolSize = cv::Size(2, 2);
-#pragma region ¸ğµç °¡ÁßÄ¡ Çà·ÄÀ» ±Õµî ºĞÆ÷·Î ·£´ı ÃÊ±âÈ­, Ä¿³Î ¿ª¹æÇâ °è»ê ÇÊÅÍ ÃÊ±âÈ­
+#pragma region ëª¨ë“  ê°€ì¤‘ì¹˜ í–‰ë ¬ì„ ê· ë“± ë¶„í¬ë¡œ ëœë¤ ì´ˆê¸°í™”, ì»¤ë„ ì—­ë°©í–¥ ê³„ì‚° í•„í„° ì´ˆê¸°í™”
 	cv::RNG gen(cv::getTickCount());
 
-	//Ä¿³Î 1Àº Ã¤³Î ÇÑ°³(ÀÔ·ÂÃş Ã¤³ÎÀÌ Èæ¹é ´ÜÀÏ)
+	//ì»¤ë„ 1ì€ ì±„ë„ í•œê°œ(ì…ë ¥ì¸µ ì±„ë„ì´ í‘ë°± ë‹¨ì¼)
 	kernels1.push_back(std::vector<cv::Mat>());
 	for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
 		kernels1[0].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 
 		kernels2.push_back(std::vector<cv::Mat>());
-		//Ä¿³Î 2´Â Ã¤³ÎÀÌ Ä¿³Î 1ÀÇ °³¼ö
+		//ì»¤ë„ 2ëŠ” ì±„ë„ì´ ì»¤ë„ 1ì˜ ê°œìˆ˜
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
 			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
@@ -71,7 +71,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	kernel1Stride = cv::Size(1, 1);
 	kernel2Stride = cv::Size(1, 1);
 	
-	//ÇÕ¼º°öÀº ¼¼ÀÓ ÆĞµùÀ¸·Î ÁøÇàÇÏ¹Ç·Î Ç®¸µÃş 2°³¿¡¼­ÀÇ Ãà¼Ò¸¸ °è»ê
+	//í•©ì„±ê³±ì€ ì„¸ì„ íŒ¨ë”©ìœ¼ë¡œ ì§„í–‰í•˜ë¯€ë¡œ í’€ë§ì¸µ 2ê°œì—ì„œì˜ ì¶•ì†Œë§Œ ê³„ì‚°
 	int wHeight = (trainingMats[0].rows - poolSize.height) / poolStride.height + 1;
 		wHeight = (wHeight - poolSize.height) / poolStride.height + 1;
 	int wWidth = (trainingMats[0].cols - poolSize.width) / poolStride.width + 1;
@@ -82,7 +82,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 
 	
 #pragma endregion
-#pragma region ÇÕ¼º°ö °á°ú, ÇÕ¼º°ö °á°ú Á¦·Î ÆĞµù, Ç®¸µ °á°ú, Ç®¸µ °á°ú Á¦·Î ÆĞµù, Ç®¸µ ¿ª¹æÇâ °è»ê ÇÊÅÍ Çà·Ä ÃÊ±âÈ­
+#pragma region í•©ì„±ê³± ê²°ê³¼, í•©ì„±ê³± ê²°ê³¼ ì œë¡œ íŒ¨ë”©, í’€ë§ ê²°ê³¼, í’€ë§ ê²°ê³¼ ì œë¡œ íŒ¨ë”©, í’€ë§ ì—­ë°©í–¥ ê³„ì‚° í•„í„° í–‰ë ¬ ì´ˆê¸°í™”
 	for (int i = 0; i < trainingMats.size(); i++) {
 		conv1Mats.push_back(std::vector<cv::Mat>());
 		conv2Mats.push_back(std::vector<cv::Mat>());
@@ -112,8 +112,8 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	}
 #pragma endregion
 
-#pragma region ÇÕ¼º°ö ¿ª¹æÇâ °è»ê ÇÊÅÍ ÃÊ±âÈ­
-	//ÇÕ¼º°ö ½Ã ¼¼ÀÓ ÆĞµù¸¸ »ç¿ëÇÏ¹Ç·Î Ç®¸µ °á°ú Å©±â¸¸ °è»ê
+#pragma region í•©ì„±ê³± ì—­ë°©í–¥ ê³„ì‚° í•„í„° ì´ˆê¸°í™”
+	//í•©ì„±ê³± ì‹œ ì„¸ì„ íŒ¨ë”©ë§Œ ì‚¬ìš©í•˜ë¯€ë¡œ í’€ë§ ê²°ê³¼ í¬ê¸°ë§Œ ê³„ì‚°
 	pool1ResultSize =
 		cv::Size(
 			(trainingMats[0].size().width - poolSize.width) / poolStride.width + 1,
@@ -124,22 +124,22 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 			(pool1ResultSize.width - poolSize.width) / poolStride.width + 1,
 			(pool1ResultSize.height - poolSize.height) / poolStride.height + 1
 		);
-	//1¹øÂ° ÇÕ¼º°öÀÇ ¿ª¹æÇâ °è»ê ÇÊÅÍ ÃÊ±âÈ­
+	//1ë²ˆì§¸ í•©ì„±ê³±ì˜ ì—­ë°©í–¥ ê³„ì‚° í•„í„° ì´ˆê¸°í™”
 	int r1Size = trainingMats[0].rows * trainingMats[0].cols;
 	for (int r1i = 0; r1i < r1Size; r1i++) {
 		conv1BackpropFilters.push_back(std::pair<int, int>());
 	}
-	//2¹øÂ° ÇÕ¼º°ö Ä¿³ÎÀÇ ¿ª¹æÇâ °è»ê ÇÊÅÍ ÃÊ±âÈ­
+	//2ë²ˆì§¸ í•©ì„±ê³± ì»¤ë„ì˜ ì—­ë°©í–¥ ê³„ì‚° í•„í„° ì´ˆê¸°í™”
 	int r2Size = pool1ResultSize.width * pool1ResultSize.height;
 	for (int r2i = 0; r2i < r2Size; r2i++) {
 		conv2BackpropFilters.push_back(std::pair<int, int>());
 	}
 #pragma endregion
 
-	//Á¤´ä µ¥ÀÌÅÍ¸¦ º¤ÅÍ·Î º¯È¯ÇÑ´Ù.
+	//ì •ë‹µ ë°ì´í„°ë¥¼ ë²¡í„°ë¡œ ë³€í™˜í•œë‹¤.
 	yMat = cv::Mat::zeros(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_64FC1);
 	for (int y = 0; y < labelVec.size(); y++) {
-		//¿­°ú ¸Â´Â´Ù¸é true(1), ¾Æ´Ï¶ó¸é false(0)¸¦ ÀúÀå
+		//ì—´ê³¼ ë§ëŠ”ë‹¤ë©´ true(1), ì•„ë‹ˆë¼ë©´ false(0)ë¥¼ ì €ì¥
 		yMat.at<double>(y, labelVec[y]) = 1;
 	}
 
@@ -151,7 +151,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 
 void CNNMachine::ForwardPropagation()
 {
-	//ÇÕ¼º°öÃş °á°ú Çà·ÄÀ» ¿ÏÀü¿¬°á½Å°æ¸Á ÀÔ·ÂÀ¸·Î º¯È¯ÇÒ ¶§ »ç¿ë
+	//í•©ì„±ê³±ì¸µ ê²°ê³¼ í–‰ë ¬ì„ ì™„ì „ì—°ê²°ì‹ ê²½ë§ ì…ë ¥ìœ¼ë¡œ ë³€í™˜í•  ë•Œ ì‚¬ìš©
 	std::vector<std::vector<double>> tempArr;
 	cv::Mat tempMat;
 
@@ -160,7 +160,7 @@ void CNNMachine::ForwardPropagation()
 		x1ZeroPaddingMats.push_back(cv::Mat_<double>());
 
 		Math::CreateZeroPadding(trainingMats[x1i], x1ZeroPaddingMats[x1i], trainingMats[0].size(), kernels1[0][0].size(), kernel1Stride);
-		//ÇÕ¼º°öÃş 1
+		//í•©ì„±ê³±ì¸µ 1
 		for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
 			Math::Convolution(x1ZeroPaddingMats[x1i], conv1Mats[x1i][k1i], trainingMats[0].size(), kernels1[0][k1i], kernel1Stride);
 			Math::Relu(conv1Mats[x1i][k1i], conv1Mats[x1i][k1i]);
@@ -169,9 +169,9 @@ void CNNMachine::ForwardPropagation()
 
 			Math::CreateZeroPadding(poolresult1[x1i][k1i], poolresult1ZeroPadding[x1i][k1i], poolresult1[0][0].size(), kernels2[0][0].size(), kernel2Stride);
 		}
-		//ÇÕ¼º°öÃş 2
-		/*ÇÕ¼º°öÃş 1ÀÇ (Çà:µ¥ÀÌÅÍ ¼ö, ¿­:Ã¤³Î ¼ö)ÀÇ ÀÌ¹ÌÁöÀ» °¡Áø poolresult1Çà·Ä°ú
-		ÇÕ¼º°öÃş 2ÀÇ kernel2Çà·ÄÀ» Çà·Ä°öÇÏµí ¿¬°á*/
+		//í•©ì„±ê³±ì¸µ 2
+		/*í•©ì„±ê³±ì¸µ 1ì˜ (í–‰:ë°ì´í„° ìˆ˜, ì—´:ì±„ë„ ìˆ˜)ì˜ ì´ë¯¸ì§€ì„ ê°€ì§„ poolresult1í–‰ë ¬ê³¼
+		í•©ì„±ê³±ì¸µ 2ì˜ kernel2í–‰ë ¬ì„ í–‰ë ¬ê³±í•˜ë“¯ ì—°ê²°*/
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
 			for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
 				Math::Convolution(poolresult1ZeroPadding[x1i][k1i], conv2Mats[x1i][k2i], poolresult1[0][0].size(), kernels2[k1i][k2i], kernel2Stride);
@@ -180,10 +180,10 @@ void CNNMachine::ForwardPropagation()
 			Math::CreateZeroPadding(conv2Mats[x1i][k2i], conv2ZeroPaddingMats[x1i][k2i], pool2ResultSize, poolSize, poolStride);
 			Math::MaxPooling(conv2ZeroPaddingMats[x1i][k2i], poolresult2[x1i][k2i], poolSize, poolStride);
 		}
-		//¿ÏÀü¿¬°á½Å°æ¸Á ÀÔ·Â
-		//4Â÷¿ø poolresult2¸¦ 2Â÷¿ø Çà·Ä xMatÀ¸·Î º¯È¯
-		//vec<vec<Mat>> to vec<vec<double>> º¯È¯ : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
-		//vec<vec<double>> to Mat º¯È¯ : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
+		//ì™„ì „ì—°ê²°ì‹ ê²½ë§ ì…ë ¥
+		//4ì°¨ì› poolresult2ë¥¼ 2ì°¨ì› í–‰ë ¬ xMatìœ¼ë¡œ ë³€í™˜
+		//vec<vec<Mat>> to vec<vec<double>> ë³€í™˜ : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
+		//vec<vec<double>> to Mat ë³€í™˜ : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
 		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
 			tempMat = poolresult2[x1i][k2i];
 			/*imshow("Window", trainingMats[x1i]);
@@ -212,16 +212,16 @@ void CNNMachine::ForwardPropagation()
 
 void CNNMachine::BackPropagation(double learningRate)
 {
-	yLoss = -(yMat - yHatMat); //¼Õ½ÇÇÔ¼ö¸¦ SoftMax ÇÔ¼ö °á°ú¿¡ ´ëÇØ ¹ÌºĞÇÑ °ª
+	yLoss = -(yMat - yHatMat); //ì†ì‹¤í•¨ìˆ˜ë¥¼ SoftMax í•¨ìˆ˜ ê²°ê³¼ì— ëŒ€í•´ ë¯¸ë¶„í•œ ê°’
 	wT = wMat.t();
-	yLossW = yLoss*wT; //¼Õ½Ç ÇÔ¼ö¸¦ ¿ÏÀü¿¬°áÃş W¿¡ ´ëÇØ ¹ÌºĞÇÑ °ª
-	std::vector<std::vector<cv::Mat>> yLossWTemp; //yLossW¸¦ Ç®¸µ2°á°úÇà·ÄÀÇ Å©±â·Î Â÷¿ø º¯È¯
+	yLossW = yLoss*wT; //ì†ì‹¤ í•¨ìˆ˜ë¥¼ ì™„ì „ì—°ê²°ì¸µ Wì— ëŒ€í•´ ë¯¸ë¶„í•œ ê°’
+	std::vector<std::vector<cv::Mat>> yLossWTemp; //yLossWë¥¼ í’€ë§2ê²°ê³¼í–‰ë ¬ì˜ í¬ê¸°ë¡œ ì°¨ì› ë³€í™˜
 
-	std::vector<std::vector<cv::Mat>> yLossWUpRelu2; //¼Õ½Ç ÇÔ¼ö¸¦ ÇÕ¼º°ö2 °á°ú¿¡ ´ëÇØ ¹ÌºĞÇÑ °ª (UpÀº Up-Sampleling(Ç®¸µÇÔ¼öÀÇ ¹ÌºĞ) ¾àÀÚ)
-	std::vector<std::vector<cv::Mat>> yLossWUpRelu2P1UpRelu; //¼Õ½Ç ÇÔ¼ö¸¦ ÇÕ¼º°ö1 °á°ú¿¡ ´ëÇØ ¹ÌºĞÇÑ °ª
+	std::vector<std::vector<cv::Mat>> yLossWUpRelu2; //ì†ì‹¤ í•¨ìˆ˜ë¥¼ í•©ì„±ê³±2 ê²°ê³¼ì— ëŒ€í•´ ë¯¸ë¶„í•œ ê°’ (Upì€ Up-Sampleling(í’€ë§í•¨ìˆ˜ì˜ ë¯¸ë¶„) ì•½ì)
+	std::vector<std::vector<cv::Mat>> yLossWUpRelu2P1UpRelu; //ì†ì‹¤ í•¨ìˆ˜ë¥¼ í•©ì„±ê³±1 ê²°ê³¼ì— ëŒ€í•´ ë¯¸ë¶„í•œ ê°’
 
 
-	//º¤ÅÍ°öÀ» À§ÇØ yLossW¸¦ Ç®¸µ2 °á°ú Çà·Ä Å©±â·Î º¯È¯
+	//ë²¡í„°ê³±ì„ ìœ„í•´ yLossWë¥¼ í’€ë§2 ê²°ê³¼ í–‰ë ¬ í¬ê¸°ë¡œ ë³€í™˜
 	for (int i = 0; i < trainingMats.size(); i++) {
 		yLossWTemp.push_back(std::vector<cv::Mat>());
 		for (int j = 0; j < KERNEL2_NUM; j++) {
@@ -233,73 +233,85 @@ void CNNMachine::BackPropagation(double learningRate)
 	
 	//std::cout << wT << std::endl;
 
-	//Â÷¿ø º¯È¯µÈ yLossW¸¦ Ç®¸µ2 ÇÊÅÍ·Î Up-Sampleling ÈÄ Relu(Conv2)Çà·Ä°ú º¤ÅÍ°ö
+	//ì°¨ì› ë³€í™˜ëœ yLossWë¥¼ í’€ë§2 í•„í„°ë¡œ Up-Sampleling í›„ Relu(Conv2)í–‰ë ¬ê³¼ ë²¡í„°ê³±
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		yLossWUpRelu2.push_back(std::vector<cv::Mat>());
 		for (int k2n = 0; k2n < KERNEL2_NUM; k2n++) {
 			yLossWUpRelu2[x1i].push_back(cv::Mat());
-			//Pooling ÇÔ¼ö ¿ª¹æÇâ °è»êÀ¸·Î Ç®¸µ ÇÊÅÍ ÇÒ´ç
+			//Pooling í•¨ìˆ˜ ì—­ë°©í–¥ ê³„ì‚°ìœ¼ë¡œ í’€ë§ í•„í„° í• ë‹¹
 			Math::GetMaxPoolingFilter(conv2ZeroPaddingMats[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolresult2[x1i][k2n], poolSize, poolStride);
-			//Ç®¸µ ÇÊÅÍ·Î ¾÷»ùÇÃ¸µ
+			//í’€ë§ í•„í„°ë¡œ ì—…ìƒ˜í”Œë§
 			Math::MaxPoolingBackprop(yLossWTemp[x1i][k2n], yLossWUpRelu2[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolSize, poolStride);
 
-			//Relu ÇÔ¼ö ¿ª¹æÇâ °è»ê
-			//(Á¤¹æÇâ °è»ê¿¡¼­ ÀÌ¹Ì ReLU¸¦ Àû¿ëÇßÀ¸¹Ç·Î »ı·«)
+			//Relu í•¨ìˆ˜ ì—­ë°©í–¥ ê³„ì‚°
+			//(ì •ë°©í–¥ ê³„ì‚°ì—ì„œ ì´ë¯¸ ReLUë¥¼ ì ìš©í–ˆìœ¼ë¯€ë¡œ ìƒëµ)
 			//Math::Relu(conv2Mats[x1i][k2n], conv2Mats[x1i][k2n]);
 
-			//Up-Sampleling °á°ú Çà·Ä°ú Relu(Conv2)Çà·ÄÀ» º¤ÅÍ°ö
+			//Up-Sampleling ê²°ê³¼ í–‰ë ¬ê³¼ Relu(Conv2)í–‰ë ¬ì„ ë²¡í„°ê³±
 			yLossWUpRelu2[x1i][k2n] = yLossWUpRelu2[x1i][k2n].mul(conv2Mats[x1i][k2n]);
 			//Math::Relu(yLossWUpRelu2[x1i][k2n], yLossWUpRelu2[x1i][k2n]);
 			//std::cout << "Conv2Mats\n" << conv2Mats[x1i][k2n] << std::endl;
-			//std::cout << "ReLu Conv2¿ÍÀÇ º¤ÅÍ°ö ÈÄ\n" << yLossWUpRelu2[x1i][k2n] << std::endl;
+			//std::cout << "ReLu Conv2ì™€ì˜ ë²¡í„°ê³± í›„\n" << yLossWUpRelu2[x1i][k2n] << std::endl;
 		}
 	}
 	
-	//Ä¿³Î2 ¿ª¹æÇâ °è»êÀ» À§ÇÑ ÇÕ¼º°ö2 ÇÊÅÍ °è»ê
+	//ì»¤ë„2 ì—­ë°©í–¥ ê³„ì‚°ì„ ìœ„í•œ í•©ì„±ê³±2 í•„í„° ê³„ì‚°
 	Math::GetConvBackpropFilters(poolresult1[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
-	//Ä¿³Î1 ¿ª¹æÇâ °è»êÀ» À§ÇÑ ÇÕ¼º°ö1 ÇÊÅÍ °è»ê
+	//ì»¤ë„1 ì—­ë°©í–¥ ê³„ì‚°ì„ ìœ„í•œ í•©ì„±ê³±1 í•„í„° ê³„ì‚°
 	Math::GetConvBackpropFilters(trainingMats[0], &conv1BackpropFilters, kernels1[0][0], kernel1Stride);
 
-	//yLossWUpRelu2Çà·Ä°ú ÇÕ¼º°ö2 ÇÔ¼öÀÇ Ä¿³Î2¿¡ ´ëÇÑ ¹ÌºĞ Çà·ÄÀ» º¤ÅÍ°öÇÏ°í, Ç®¸µ1 ÇÊÅÍ·Î Up-Sampleling ÈÄ Relu(Conv1)Çà·Ä°ú º¤ÅÍ°ö
+	//yLossWUpRelu2í–‰ë ¬ê³¼ í•©ì„±ê³±2 í•¨ìˆ˜ì˜ ì»¤ë„2ì— ëŒ€í•œ ë¯¸ë¶„ í–‰ë ¬ì„ ë²¡í„°ê³±í•˜ê³ , í’€ë§1 í•„í„°ë¡œ Up-Sampleling í›„ Relu(Conv1)í–‰ë ¬ê³¼ ë²¡í„°ê³±
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		yLossWUpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
-		//Ä¿³Î 1 °³¼ö¸¸Å­ ¹İº¹
+		//ì»¤ë„ 1 ê°œìˆ˜ë§Œí¼ ë°˜ë³µ
 		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
 			yLossWUpRelu2P1UpRelu[x1i].push_back(cv::Mat());
-			cv::Mat yLossWUpRelu2P1;
+/*cv::Mat yLossWUpRelu2P1;
 
-			//Ä¿³Î 2 °³¼ö¸¸Å­ ¹İº¹
+			//ì»¤ë„ 2 ê°œìˆ˜ë§Œí¼ ë°˜ë³µ
 			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
-				//yLossWUpRelu2Çà·Ä°ú ÇÕ¼º°ö2 ÇÔ¼öÀÇ Ä¿³Î2¿¡ ´ëÇÑ ¹ÌºĞ Çà·ÄÀ» º¤ÅÍ°ö
+				//yLossWUpRelu2í–‰ë ¬ê³¼ í•©ì„±ê³±2 í•¨ìˆ˜ì˜ ì»¤ë„2ì— ëŒ€í•œ ë¯¸ë¶„ í–‰ë ¬ì„ ë²¡í„°ê³±
 				Math::ConvXBackprop(yLossWUpRelu2[x1i][k2n], kernels2[k1n][k2n], yLossWUpRelu2P1, conv2BackpropFilters, kernel1Stride, learningRate);
 			}
-			//Pooling ÇÔ¼ö ¿ª¹æÇâ °è»êÀ¸·Î Ç®¸µ ÇÊÅÍ Á¤ÀÇ
+*/
+
+			cv::Mat yLossWUpRelu2P1 = cv::Mat(yLossWUpRelu2[x1i][k2n].size, CV_64FC1);
+yLossWUpRelu2P1.setTo(0);
+
+			//ì»¤ë„ 2 ê°œìˆ˜ë§Œí¼ ë°˜ë³µ
+			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
+cv::Mat k2Temp;
+				//yLossWUpRelu2í–‰ë ¬ê³¼ í•©ì„±ê³±2 í•¨ìˆ˜ì˜ ì»¤ë„2ì— ëŒ€í•œ ë¯¸ë¶„ í–‰ë ¬ì„ ë²¡í„°ê³±
+				Math::ConvXBackprop(yLossWUpRelu2[x1i][k2n], kernels2[k1n][k2n], k2Temp, conv2BackpropFilters, kernel1Stride, learningRate);
+			yLossWUpRelu2P1 += k2Temp;
+}
+			//Pooling í•¨ìˆ˜ ì—­ë°©í–¥ ê³„ì‚°ìœ¼ë¡œ í’€ë§ í•„í„° ì •ì˜
 			Math::GetMaxPoolingFilter(conv1ZeroPaddingMats[x1i][k1n], pool1BackpropFilters[x1i][k1n], poolresult1[x1i][k1n], poolSize, poolStride);
-			//Ç®¸µ ÇÊÅÍ·Î ¾÷»ùÇÃ¸µ
+			//í’€ë§ í•„í„°ë¡œ ì—…ìƒ˜í”Œë§
 			Math::MaxPoolingBackprop(yLossWUpRelu2P1, yLossWUpRelu2P1UpRelu[x1i][k1n], pool1BackpropFilters[x1i][k1n], poolSize, poolStride);
 
-			//Relu ÇÔ¼ö ¿ª¹æÇâ °è»ê
-			//(Á¤¹æÇâ °è»ê¿¡¼­ ÀÌ¹Ì ReLU¸¦ Àû¿ëÇßÀ¸¹Ç·Î »ı·«)
+			//Relu í•¨ìˆ˜ ì—­ë°©í–¥ ê³„ì‚°
+			//(ì •ë°©í–¥ ê³„ì‚°ì—ì„œ ì´ë¯¸ ReLUë¥¼ ì ìš©í–ˆìœ¼ë¯€ë¡œ ìƒëµ)
 			//Math::Relu(conv1Mats[x1i][k1n], conv1Mats[x1i][k1n]);
 			yLossWUpRelu2P1UpRelu[x1i][k1n] = yLossWUpRelu2P1UpRelu[x1i][k1n].mul(conv1Mats[x1i][k1n]);
 		}
 	}
-#pragma region ÇÕ¼º°öÃş1 °¡ÁßÄ¡ Çà·Ä(Ä¿³Î1) ¿ª¹æÇâ °è»ê
-	//std::cout << "\nÄ¿³Î 1 ¿ª¹æÇâ °è»ê " << std::endl;
+#pragma region í•©ì„±ê³±ì¸µ1 ê°€ì¤‘ì¹˜ í–‰ë ¬(ì»¤ë„1) ì—­ë°©í–¥ ê³„ì‚°
+	//std::cout << "\nì»¤ë„ 1 ì—­ë°©í–¥ ê³„ì‚° " << std::endl;
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
 			for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
 				cv::Mat newKernel;
 				Math::ConvKBackprop(-yLossWUpRelu2P1UpRelu[x1i][k1n], x1ZeroPaddingMats[x1i], kernels1[k1c][k1n], newKernel, conv1BackpropFilters, kernel1Stride, learningRate);
 				newKernel.copyTo(kernels1[k1c][k1n]);
-				//std::cout << "Ä¿³Î ¿ª¹æÇâ Çà·Ä ¾÷µ¥ÀÌÆ® ÈÄ : " << kernels1[k1c][k1n] << std::endl;
+				//std::cout << "ì»¤ë„ ì—­ë°©í–¥ í–‰ë ¬ ì—…ë°ì´íŠ¸ í›„ : " << kernels1[k1c][k1n] << std::endl;
 			}
 		}
 	}
 #pragma endregion
 
-#pragma region ÇÕ¼º°öÃş2 °¡ÁßÄ¡ Çà·Ä(Ä¿³Î2) ¿ª¹æÇâ °è»ê
-	//std::cout << "\nÄ¿³Î 2 ¿ª¹æÇâ °è»ê " << std::endl;
+#pragma region í•©ì„±ê³±ì¸µ2 ê°€ì¤‘ì¹˜ í–‰ë ¬(ì»¤ë„2) ì—­ë°©í–¥ ê³„ì‚°
+	//std::cout << "\nì»¤ë„ 2 ì—­ë°©í–¥ ê³„ì‚° " << std::endl;
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		for (int k2c = 0; k2c < kernels2.size(); k2c++) {
 			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
@@ -307,14 +319,14 @@ void CNNMachine::BackPropagation(double learningRate)
 
 				Math::ConvKBackprop(-yLossWUpRelu2[x1i][k2n], poolresult1ZeroPadding[x1i][k2c], kernels2[k2c][k2n],newKernel, conv2BackpropFilters, kernel2Stride, learningRate);
 				newKernel.copyTo(kernels2[k2c][k2n]);
-				//std::cout << "Ä¿³Î ¿ª¹æÇâ Çà·Ä ¾÷µ¥ÀÌÆ® ÈÄ : " << kernels2[k2c][k2n] << std::endl;
+				//std::cout << "ì»¤ë„ ì—­ë°©í–¥ í–‰ë ¬ ì—…ë°ì´íŠ¸ í›„ : " << kernels2[k2c][k2n] << std::endl;
 			}
 		}
 	}
 
 #pragma endregion
 
-#pragma region ¿ÏÀü¿¬°á½Å°æ¸ÁÃş °¡ÁßÄ¡ Çà·Ä ¿ª¹æÇâ °è»ê
+#pragma region ì™„ì „ì—°ê²°ì‹ ê²½ë§ì¸µ ê°€ì¤‘ì¹˜ í–‰ë ¬ ì—­ë°©í–¥ ê³„ì‚°
 	wMat -= learningRate *(xMat.t() * (yLoss));
 	//std::cout << wMat << std::endl;
 #pragma endregion
