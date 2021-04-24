@@ -33,11 +33,14 @@ public:
 	cv::Size pool2ResultSize;
 
 	//정방향 완전연결신경망 계산 시 사용하는 행렬들
-	cv::Mat xMat;//poolresult2를 신경망 입력으로 펼친 형태
-	cv::Mat wMat;
-	cv::Mat yHatMat;
-	cv::Mat yMat;
+	cv::Mat xMat;//완전연결신경망 1층 입력 (poolresult2를 2차원으로 펼친 형태)
+	cv::Mat w1Mat;//완전연결신경망 1층 입력
+	cv::Mat a1Mat;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
+	cv::Mat w2Mat;//완전연결신경망 2층 입력
+	cv::Mat yHatMat;//모델 예측값
+	cv::Mat yMat;//정답 행렬
 
+#pragma region 역방향 계산에서만 사용
 	//역방향 계산시 사용하는 Max풀링 필터(풀링을 입력행렬에 대해 미분)
 	//데이터 순서 : 데이터 수, 커널 수, 행렬
 	std::vector<std::vector<cv::Mat>> pool1BackpropFilters;
@@ -55,12 +58,13 @@ public:
 	std::vector<std::pair<int, int>> conv1BackpropFilters;
 	std::vector<std::pair<int, int>> conv2BackpropFilters;
 
-	cv::Mat yLoss; 
-	cv::Mat wT;
-	cv::Mat yLossW;
-
+	cv::Mat yLoss;
+	cv::Mat w2T;
+	cv::Mat yLossW2;
+	cv::Mat yLossW2Relu3W1;
+#pragma endregion
 	double lossAverage;
-	double cost;
+	double loss;
 public:
 	void Training(int epoch, double learningRate, double l2);
 	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);
