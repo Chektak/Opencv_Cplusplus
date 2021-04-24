@@ -290,7 +290,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 		}
 	}
 	kOutput *= learningRate;
-	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	kOutput += _Kernel.getMat();
 }
 
@@ -332,8 +332,7 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 
 void Math::NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w)
 {
-	cv::Mat output;
-	_Input.getMat().copyTo(output);
+	cv::Mat output = _Input.getMat();
 	cv::Mat wMat = w.getMat();
 	
 	output *= wMat;
