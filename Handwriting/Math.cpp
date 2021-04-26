@@ -72,6 +72,7 @@ void Math::Convolution(cv::InputArray _Input, cv::OutputArray _Output, const cv:
 			}
 		}
 	}
+	output /= kernel.rows * kernel.cols;
 }
 
 void Math::Relu(cv::InputArray _Input, cv::OutputArray _Output)
@@ -265,8 +266,8 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 
 	//std::cout << "커널 업데이트" << std::endl;
 	//소수점 4자리까지 출력
-	std::cout << std::fixed;
-	std::cout.precision(0);
+	//std::cout << std::fixed;
+	//std::cout.precision(0);
 	//input행렬의 크기는 합성곱이 세임 패딩으로 진행되기에 합성곱 결과 행렬과 같은 크기
 	for (int iY = 0; iY < _Input.size().height; iY++) {
 		for (int iX = 0; iX < _Input.size().width; iX++) {
@@ -290,7 +291,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 			}
 #pragma endregion
 			//평균값 계산
-			//kTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
+			kTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			kOutput += kTemp;
 			//std::cout << std::endl;
 		}
@@ -311,8 +312,8 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 	cv::Mat output = _Output.getMat();
 
 	//소수점 4자리까지 출력
-	std::cout << std::fixed;
-	std::cout.precision(0);
+	//std::cout << std::fixed;
+	//std::cout.precision(0);
 	//input행렬의 크기는 합성곱이 세임 패딩으로 진행되기에 합성곱 결과 행렬과 같은 크기
 	for (int iY = 0; iY < _Input.size().height; iY++) {
 		for (int iX = 0; iX < _Input.size().width; iX++) {
@@ -335,7 +336,7 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 				}
 			}
 #pragma endregion
-			//oTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
+			oTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			output += oTemp;
 			//std::cout << std::endl;
 		}

@@ -16,7 +16,6 @@ public:
 	cv::Size kernel2Stride;
 
 	//데이터 순서 : 데이터 수, 채널 수, 스칼라
-	//데이터 순서 : 데이터 수, 채널 수, 스칼라
 	std::vector<std::vector<double>> conv1Bias;//합성곱층 1 결과에 더할 편향
 	std::vector<std::vector<double>> conv2Bias;//합성곱층 2 결과에 더할 편향
 	
@@ -40,8 +39,10 @@ public:
 	//정방향 완전연결신경망 계산 시 사용하는 행렬들
 	cv::Mat xMat;//완전연결신경망 1층 입력 (pool2result를 2차원으로 펼친 형태)
 	cv::Mat w1Mat;//완전연결신경망 1층 입력
+	double bias1 = 0;
 	cv::Mat a1Mat;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
 	cv::Mat w2Mat;//완전연결신경망 2층 입력
+	double bias2 = 0;
 	cv::Mat yHatMat;//모델 예측값
 	cv::Mat yMat;//정답 행렬
 
