@@ -2,9 +2,10 @@
 
 void CNNMachine::Training(int epoch, double learningRate, double l2)
 {
+	bool autoTraining = true;
 	for (int i = 0; i < epoch; i++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
-		std::cout << i<<"번째 훈련" << std::endl;
+		std::cout << i << "번째 훈련" << std::endl;
 		std::cout << "정방향 계산" << std::endl;
 		ForwardPropagation();
 		loss = 0;
@@ -20,41 +21,49 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		//std::cout << "yHatMat : " << yHatMat << std::endl;
 		std::cout << "코스트 : " << loss << std::endl;
 
-		//아무키나 누르면 다음
-		int key = cv::waitKey(0);
+		//autoTraining이 true면 자동 진행, false면 입력까지 기다리기
+		int key = cv::waitKey((int)autoTraining *3000);
+		//아무키나 누르면 autoTraining 중지
 		if (key != -1) {
-			std::cout << "역방향 계산" << std::endl;
-			BackPropagation(learningRate);
-			if (key == 13) //enter키
-			{
-				std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
-				std::cout << "yMat(정답 행렬) : " << std::endl;
-				std::cout << yMat << std::endl;
-				std::cout << "yHatMat(가설 행렬) : " << std::endl;
-				std::cout << yHatMat << std::endl;
-				std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
-				std::cout << yLoss << std::endl;
-				std::cout << "kernels1[0][0] : " << std::endl;
-				std::cout << kernels1[0][0] << std::endl;
-				std::cout << "kernels2[0][0] : " << std::endl;
-				std::cout << kernels2[0][0] << std::endl;
-				std::cout << "conv1Bias[0][0]" << std::endl;
-				std::cout << conv1Bias[0][0] << std::endl;
-				std::cout << "conv1Bias[0][1]" << std::endl;
-				std::cout << conv1Bias[0][1] << std::endl;
-				
-				std::cout << "conv2Bias[0][0]" << std::endl;
-				std::cout << conv2Bias[0][0] << std::endl;
-				std::cout << "conv2Bias[0][1]" << std::endl;
-				std::cout << conv2Bias[0][1] << std::endl;
-				std::cout << "w1Mat[0][0]" << std::endl;
-				std::cout << w1Mat.at<double>(0, 0) << std::endl;
-				std::cout << "w2Mat[0][0]" << std::endl;
-				std::cout << w2Mat.at<double>(0, 0) << std::endl;
-				
-				
-			}
+			autoTraining = false;
 		}
+		//1번 키를 누르면 autoTraining 실행
+		if (key == 49) {
+			autoTraining = true;
+		}
+		std::cout << "역방향 계산 중..." << std::endl;
+		BackPropagation(learningRate);
+		
+		//enter키를 누르면 훈련 행렬 출력
+		if (key == 13)
+		{
+			std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
+			std::cout << "yMat(정답 행렬) : " << std::endl;
+			std::cout << yMat << std::endl;
+			std::cout << "yHatMat(가설 행렬) : " << std::endl;
+			std::cout << yHatMat << std::endl;
+			std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
+			std::cout << yLoss << std::endl;
+			std::cout << "kernels1[0][0] : " << std::endl;
+			std::cout << kernels1[0][0] << std::endl;
+			std::cout << "kernels2[0][0] : " << std::endl;
+			std::cout << kernels2[0][0] << std::endl;
+			std::cout << "conv1Bias[0][0]" << std::endl;
+			std::cout << conv1Bias[0][0] << std::endl;
+			std::cout << "conv1Bias[0][1]" << std::endl;
+			std::cout << conv1Bias[0][1] << std::endl;
+
+			std::cout << "conv2Bias[0][0]" << std::endl;
+			std::cout << conv2Bias[0][0] << std::endl;
+			std::cout << "conv2Bias[0][1]" << std::endl;
+			std::cout << conv2Bias[0][1] << std::endl;
+			std::cout << "w1Mat[0][0]" << std::endl;
+			std::cout << w1Mat.at<double>(0, 0) << std::endl;
+			std::cout << "w2Mat[0][0]" << std::endl;
+			std::cout << w2Mat.at<double>(0, 0) << std::endl;
+
+		}
+	
 	}
 }
 
@@ -64,6 +73,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 		trainingMats.push_back(cv::Mat());
 		//uchar형 행렬 요소를 double형 행렬 요소로 타입 캐스팅
 		trainingVec[i].convertTo(trainingMats[i], CV_64FC1);
+		//평균을 계산해 간단한 특성 스케일 표준화
 		trainingMats[i] /= 255;
 	}
 
@@ -254,22 +264,20 @@ void CNNMachine::ForwardPropagation()
 
 void CNNMachine::BackPropagation(double learningRate)
 {
-	//std::cout << std::fixed;
-	//std::cout << yMat.size() << std::endl;
-	//std::cout << yHatMat.size() << std::endl;
 	yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	w2T = w2Mat.t();
 	yLossW2 = yLoss*w2T; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
+	yLossW2 /= yLoss.cols;//평균을 계산해 간단한 특성 스케일 표준화
 
 	//Relu(a1Mat)과 벡터곱
 	//std::cout << "ReLu 벡터곱 전\n" << yLossW2 << std::endl;
-
 	yLossW2Relu3 = yLossW2.mul(a1Mat); //손실함수를 완전연결층1 결과에 대해 미분한 값
 	//Math::Relu(yLossW2Relu3, yLossW2Relu3);
-	
 	//std::cout << "ReLu 벡터곱 후\n" << yLossW2Relu3	<< std::endl;
 
 	yLossW2Relu3W1 = yLossW2Relu3 * w1Mat.t();//손실 함수를 완전연결층1 입력에 대해 미분한 값
+	//평균을 계산해 간단한 특성 스케일 표준화
+	yLossW2Relu3W1 /= yLossW2Relu3.cols;
 
 	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1Temp; //yLossW2Relu3W1를 풀링2결과행렬의 크기로 차원 변환
 	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2; //손실 함수를 합성곱2 결과에 대해 미분한 값 (Up은 Up-Sampleling(풀링함수의 미분))
@@ -388,7 +396,7 @@ void CNNMachine::BackPropagation(double learningRate)
 #pragma endregion
 
 #pragma region 완전연결신경망층 가중치 행렬 역방향 계산
-	w1Mat -= learningRate * xMat.t() * (yLossW2Relu3) / w2Mat.size().width;
+	w1Mat -= learningRate * xMat.t() * (yLossW2Relu3);// / w2Mat.size().width;
 	double bias1Backprop = 0;
 	for (int y = 0; y < yLossW2Relu3.rows; y++) {
 		for (int x = 0; x < yLossW2Relu3.cols; x++) {
@@ -397,7 +405,7 @@ void CNNMachine::BackPropagation(double learningRate)
 	}
 	bias1 -= learningRate * bias1Backprop / yLossW2Relu3.rows * yLossW2Relu3.cols;
 	
-	w2Mat -= learningRate * (a1Mat.t() * (yLoss)) / yLoss.size().width;
+	w2Mat -= learningRate * (a1Mat.t() * (yLoss));// / yLoss.size().width;
 	double bias2Backprop = 0;
 	for (int y = 0; y < yLoss.rows; y++) {
 		for (int x = 0; x < yLoss.cols; x++) {

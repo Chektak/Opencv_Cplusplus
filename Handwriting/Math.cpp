@@ -72,6 +72,7 @@ void Math::Convolution(cv::InputArray _Input, cv::OutputArray _Output, const cv:
 			}
 		}
 	}
+	//평균을 계산해 간단한 특성 스케일 표준화
 	output /= kernel.rows * kernel.cols;
 }
 
@@ -290,7 +291,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 				}
 			}
 #pragma endregion
-			//평균값 계산
+			//평균을 계산해 간단한 특성 스케일 표준화
 			kTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			kOutput += kTemp;
 			//std::cout << std::endl;
@@ -336,6 +337,7 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 				}
 			}
 #pragma endregion
+			//평균을 계산해 간단한 특성 스케일 표준화
 			oTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			output += oTemp;
 			//std::cout << std::endl;
