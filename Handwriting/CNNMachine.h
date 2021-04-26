@@ -64,20 +64,24 @@ public:
 	std::vector<std::pair<int, int>> conv1BackpropFilters;
 	std::vector<std::pair<int, int>> conv2BackpropFilters;
 
-	cv::Mat yLoss;
+	cv::Mat yLoss; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	cv::Mat w2T;
-	cv::Mat yLossW2;
-	cv::Mat yLossW2Relu3;
-	cv::Mat yLossW2Relu3W1;
+	cv::Mat yLossW2;//손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
+	cv::Mat yLossW2Relu3; //손실함수를 완전연결층1 결과에 대해 미분한 값
+	cv::Mat yLossW2Relu3W1; //손실 함수를 완전연결층1 입력에 대해 미분한 값
+
+	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2; //손실 함수를 합성곱2 결과에 대해 미분한 값 (Up은 Up-Sampleling(풀링함수의 미분))
+	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2P1UpRelu; //손실 함수를 합성곱1 결과에 대해 미분한 값
 #pragma endregion
-	double lossAverage;
+	std::vector<double> lossAverages;  
 	double loss;
+	double learningRate;
 public:
 	void Training(int epoch, double learningRate, double l2);
 	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);
 	//정방향 계산
 	void ForwardPropagation();
 	void BackPropagation(double learningRate);
-
+	void SaveModel(cv::String fileName, int nowEpoch);
 };
 

@@ -2,41 +2,20 @@
 
 void CNNMachine::Training(int epoch, double learningRate, double l2)
 {
+	this->learningRate = learningRate;
 	bool autoTraining = true;
-	for (int i = 0; i < epoch; i++) {
+	lossAverages.push_back(0);
+	for (int i = 1; i <= epoch; i++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
 		std::cout << i << "번째 훈련" << std::endl;
-		std::cout << "정방향 계산" << std::endl;
-		ForwardPropagation();
-		loss = 0;
-		for (int y = 0; y < yMat.rows; y++) {
-			for (int x = 0; x < yMat.cols; x++) {
-				//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
-				loss += yMat.at<double>(y, x) * log((yHatMat.at<double>(y, x) == 0) ? 0.00000000001 : yHatMat.at<double>(y, x));
-			}
-		}
-		//loss /= -yMat.rows;
-		loss *= -1;
-		//std::cout << i<<"yMat : " << yMat << std::endl;
-		//std::cout << "yHatMat : " << yHatMat << std::endl;
-		std::cout << "코스트 : " << loss << std::endl;
-
-		//autoTraining이 true면 자동 진행, false면 입력까지 기다리기
-		int key = cv::waitKey((int)autoTraining *3000);
-		//아무키나 누르면 autoTraining 중지
-		if (key != -1) {
-			autoTraining = false;
-		}
-		//1번 키를 누르면 autoTraining 실행
-		if (key == 49) {
-			autoTraining = true;
-		}
-		std::cout << "역방향 계산 중..." << std::endl;
-		BackPropagation(learningRate);
 		
-		//enter키를 누르면 훈련 행렬 출력
-		if (key == 13)
+		//autoTraining이 true면 5초마다 자동 진행, false면 입력까지 기다리기
+		int key = cv::waitKey((int)autoTraining * 8 * USEDATA_NUM);
+  		switch (key) {
+			
+		case 13: //enter키를 누르면 훈련 행렬 출력
 		{
+
 			std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
 			std::cout << "yMat(정답 행렬) : " << std::endl;
 			std::cout << yMat << std::endl;
@@ -61,9 +40,52 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 			std::cout << w1Mat.at<double>(0, 0) << std::endl;
 			std::cout << "w2Mat[0][0]" << std::endl;
 			std::cout << w2Mat.at<double>(0, 0) << std::endl;
-
+			break;
 		}
-	
+		case 49: //1번 키를 누르면 autoTraining 실행/중지
+		{
+			autoTraining = !autoTraining;
+			break;
+		}   
+		case 50: //2번 키를 누르면 모델 저장
+		{
+			if (key == 50) {
+				SaveModel("Model.json", i);
+			}
+			break;
+		}
+		default://이외 아무키나 누르면 autoTraining 중지
+		{
+			if (key != -1) {
+				autoTraining = false;
+			}
+			break;
+		}
+		}
+
+		std::cout << "정방향 계산" << std::endl;
+		ForwardPropagation();
+		loss = 0;
+		for (int y = 0; y < yMat.rows; y++) {
+			for (int x = 0; x < yMat.cols; x++) {
+				//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
+				loss += yMat.at<double>(y, x) * log((yHatMat.at<double>(y, x) == 0) ? 0.00000000001 : yHatMat.at<double>(y, x));
+			}
+		}
+		//loss /= -yMat.rows;
+		loss *= -1;
+		lossAverages.push_back(lossAverages[i - 1] + loss / i);
+		//std::cout << i<<"yMat : " << yMat << std::endl;
+		//std::cout << "yHatMat : " << yHatMat << std::endl;
+		std::cout << "코스트 : " << loss << std::endl;
+		std::cout << "코스트 평균 : " << lossAverages[i] << std::endl;
+		std::cout << "역방향 계산 중..." << std::endl;
+		BackPropagation(learningRate);
+		
+		if (loss < 0.5) {
+			SaveModel("Model.json", i);
+			break;
+		}
 	}
 }
 
@@ -146,7 +168,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	}
 #pragma endregion
 
-#pragma region 합성곱 역방향 계산 필터 초기화
+#pragma region 합성곱 역방향 사용 변수 초기화
 	//합성곱 시 세임 패딩만 사용하므로 풀링 결과 크기만 계산
 	pool1ResultSize =
 		cv::Size(
@@ -168,6 +190,17 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	for (int r2i = 0; r2i < r2Size; r2i++) {
 		conv2BackpropFilters.push_back(std::pair<int, int>());
 	}
+	//손실 함수를 합성곱2 결과에 대해 미분한 행렬 초기화
+	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+		yLossW2Relu3W1UpRelu2.push_back(std::vector<cv::Mat>());
+		yLossW2Relu3W1UpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
+		for (int k2n = 0; k2n < KERNEL2_NUM; k2n++) {
+			yLossW2Relu3W1UpRelu2[x1i].push_back(cv::Mat());
+		}
+		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+			yLossW2Relu3W1UpRelu2P1UpRelu[x1i].push_back(cv::Mat());
+		}
+	}
 #pragma endregion
 
 	//정답 데이터를 벡터로 변환한다.
@@ -179,8 +212,6 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 
 	yHatMat.create(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_64FC1);
 
-
-	//lossAverage = 2305843009213693951;
 }
 
 void CNNMachine::ForwardPropagation()
@@ -275,32 +306,34 @@ void CNNMachine::BackPropagation(double learningRate)
 	//Math::Relu(yLossW2Relu3, yLossW2Relu3);
 	//std::cout << "ReLu 벡터곱 후\n" << yLossW2Relu3	<< std::endl;
 
-	yLossW2Relu3W1 = yLossW2Relu3 * w1Mat.t();//손실 함수를 완전연결층1 입력에 대해 미분한 값
+	yLossW2Relu3W1 = yLossW2Relu3 * w1Mat.t();
 	//평균을 계산해 간단한 특성 스케일 표준화
 	yLossW2Relu3W1 /= yLossW2Relu3.cols;
 
-	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1Temp; //yLossW2Relu3W1를 풀링2결과행렬의 크기로 차원 변환
-	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2; //손실 함수를 합성곱2 결과에 대해 미분한 값 (Up은 Up-Sampleling(풀링함수의 미분))
-	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2P1UpRelu; //손실 함수를 합성곱1 결과에 대해 미분한 값
+	//std::vector<std::vector<cv::Mat>> yLossW2Relu3W1Temp; //yLossW2Relu3W1를 풀링2결과행렬의 크기로 차원 변환
+	
+	
 
 	//벡터곱을 위해 yLossW2Relu3W1를 풀링2 결과 행렬 크기로 변환
-	for (int i = 0; i < trainingMats.size(); i++) {
+	/*for (int i = 0; i < trainingMats.size(); i++) {
 		yLossW2Relu3W1Temp.push_back(std::vector<cv::Mat>());
 		for (int j = 0; j < KERNEL2_NUM; j++) {
 			cv::Mat sample = yLossW2Relu3W1.row(i).reshape(1, pool2result[0].size()).row(j).reshape(1, pool2result[0][0].rows);
 			yLossW2Relu3W1Temp[i].push_back(sample);
 		}
-	}
+	}*/
 
 	//차원 변환된 yLossW2Relu3W1를 풀링2 필터로 Up-Sampleling 후 Relu(Conv2)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		yLossW2Relu3W1UpRelu2.push_back(std::vector<cv::Mat>());
+		//yLossW2Relu3W1UpRelu2.push_back(std::vector<cv::Mat>());
 		for (int k2n = 0; k2n < KERNEL2_NUM; k2n++) {
-			yLossW2Relu3W1UpRelu2[x1i].push_back(cv::Mat());
+			//yLossW2Relu3W1UpRelu2[x1i].push_back(cv::Mat());
 			//Pooling 함수 역방향 계산으로 풀링 필터 할당
 			Math::GetMaxPoolingFilter(conv2ZeroPaddingMats[x1i][k2n], pool2BackpropFilters[x1i][k2n], pool2result[x1i][k2n], poolSize, poolStride);
 			//풀링 필터로 업샘플링
-			Math::MaxPoolingBackprop(yLossW2Relu3W1Temp[x1i][k2n], yLossW2Relu3W1UpRelu2[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolSize, poolStride);
+			//Math::MaxPoolingBackprop(yLossW2Relu3W1Temp[x1i][k2n], yLossW2Relu3W1UpRelu2[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolSize, poolStride);
+			cv::Mat sample = yLossW2Relu3W1.row(x1i).reshape(1, pool2result[0].size()).row(k2n).reshape(1, pool2result[0][0].rows);
+			Math::MaxPoolingBackprop(sample, yLossW2Relu3W1UpRelu2[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolSize, poolStride);
 
 			//Relu 함수 역방향 계산
 			//Up-Sampleling 결과 행렬과 Relu(Conv2)행렬을 벡터곱
@@ -319,10 +352,10 @@ void CNNMachine::BackPropagation(double learningRate)
 
 	//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱하고, 풀링1 필터로 Up-Sampleling 후 Relu(Conv1)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
-		yLossW2Relu3W1UpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
+		//yLossW2Relu3W1UpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
 		//커널 1 개수만큼 반복
 		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
-			yLossW2Relu3W1UpRelu2P1UpRelu[x1i].push_back(cv::Mat());
+			//yLossW2Relu3W1UpRelu2P1UpRelu[x1i].push_back(cv::Mat());
 
 			cv::Mat yLossW2Relu3W1UpRelu2P1 = cv::Mat(yLossW2Relu3W1UpRelu2[x1i][0].size(), CV_64FC1);
 			yLossW2Relu3W1UpRelu2P1.setTo(0);
@@ -334,8 +367,9 @@ void CNNMachine::BackPropagation(double learningRate)
 				Math::ConvXBackprop(yLossW2Relu3W1UpRelu2[x1i][k2n], kernels2[k1n][k2n], k2Temp, conv2BackpropFilters, kernel1Stride, learningRate);
 				yLossW2Relu3W1UpRelu2P1 += k2Temp;
 			}
-			//평균치 계산
+			//평균 계산으로 특성 스케일 표준화
 			yLossW2Relu3W1UpRelu2P1 /= kernels2[0].size();
+
 			//Pooling 함수 역방향 계산으로 풀링 필터 정의
 			Math::GetMaxPoolingFilter(conv1ZeroPaddingMats[x1i][k1n], pool1BackpropFilters[x1i][k1n], pool1result[x1i][k1n], poolSize, poolStride);
 			//풀링 필터로 업샘플링
@@ -417,6 +451,35 @@ void CNNMachine::BackPropagation(double learningRate)
 #pragma endregion
 	
 	
+}
+
+void CNNMachine::SaveModel(cv::String fileName, int nowEpoch)
+{
+	cv::FileStorage fs = cv::FileStorage(fileName, cv::FileStorage::WRITE);
+
+	if (!fs.isOpened()) {
+		std::cerr << "File open Failed!!!" << std::endl;
+		return;
+	}
+	fs << "LearningRate" << learningRate;
+	fs << "loss" << loss;
+	fs << "lossAverages" << lossAverages;
+	fs << "NowEpoch" << nowEpoch;
+	fs << "USEDATA_NUM" << USEDATA_NUM;
+	fs << "KERNEL1_NUM" << KERNEL1_NUM;
+	fs << "KERNEL2_NUM" << KERNEL2_NUM;
+	fs << "L1" << 0;
+	fs << "L2" << 0;
+	fs << "Kernels1" << kernels1;
+	fs << "Kernels2" << kernels2;
+	fs << "Conv1Bias" << conv1Bias;
+	fs << "Conv2Bias" << conv2Bias;
+	fs << "w1Mat" << w1Mat;
+	fs << "w2Mat" << w2Mat;
+	fs << "Bias1" << bias1;
+	fs << "Bias2" << bias2;
+
+	std::cout << "File write Completed!!!" << std::endl;
 }
 
 

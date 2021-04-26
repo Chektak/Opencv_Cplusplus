@@ -15,7 +15,7 @@
 //int USEDATA_NUM = 5;
 //int KERNEL1_NUM = 4;
 //int KERNEL2_NUM = 8;
-#define USEDATA_NUM 100
+#define USEDATA_NUM 500
 #define KERNEL1_NUM 4
 #define KERNEL2_NUM 8
 //숫자 0~9를 분류하므로 클래스 분류 수는 10개
