@@ -15,6 +15,11 @@ public:
 	cv::Size kernel1Stride;
 	cv::Size kernel2Stride;
 
+	//데이터 순서 : 데이터 수, 채널 수, 스칼라
+	//데이터 순서 : 데이터 수, 채널 수, 스칼라
+	std::vector<std::vector<double>> conv1Bias;//합성곱층 1 결과에 더할 편향
+	std::vector<std::vector<double>> conv2Bias;//합성곱층 2 결과에 더할 편향
+	
 	//정방향 합성곱 계산 시 사용하는 행렬들
 	//데이터 순서 : 데이터 수, 채널 수, 행렬
 	std::vector<std::vector<cv::Mat>> conv1Mats;//합성곱층 1 결과

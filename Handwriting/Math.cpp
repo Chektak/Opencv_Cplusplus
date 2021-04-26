@@ -273,6 +273,9 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 			if (input.at<double>(iY, iX) == 0)
 				continue;
 #pragma region 합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
+			cv::Mat kTemp = cv::Mat(kOutput.size(), CV_64FC1);
+			kTemp.setTo(0);
+
 			int fIndex = iY * _Input.size().width + iX;
 
 			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
@@ -282,17 +285,18 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 			for (int fY = fYStart; fY <= fYEnd; fY++) {
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
 					//Kernel 업데이트
-					kOutput.at<double>(fY, fX) += input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX);
+					kTemp.at<double>(fY, fX) += input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX);
 				}
 			}
 #pragma endregion
 			//평균값 계산
-			//kOutput /= (fYEnd - fYStart) * (fXEnd - fXStart);
+			//kTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
+			kOutput += kTemp;
 			//std::cout << std::endl;
 		}
 	}
 	kOutput *= learningRate;
-	std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	kOutput += _Kernel.getMat();
 }
 
@@ -315,6 +319,9 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 			if (input.at<double>(iY, iX) == 0)
 				continue;
 #pragma region 합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
+			cv::Mat oTemp = cv::Mat(output.size(), CV_64FC1);
+			oTemp.setTo(0);
+
 			int fIndex = iY * _Input.size().width + iX;
 
 			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
@@ -328,7 +335,8 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 				}
 			}
 #pragma endregion
-			//output /= (fYEnd - fYStart) * (fXEnd - fXStart);
+			//oTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
+			output += oTemp;
 			//std::cout << std::endl;
 		}
 	}
