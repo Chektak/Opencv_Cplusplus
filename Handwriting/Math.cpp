@@ -272,7 +272,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 		for (int iX = 0; iX < _Input.size().width; iX++) {
 			if (input.at<double>(iY, iX) == 0)
 				continue;
-			//합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
+#pragma region 합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
 			int fIndex = iY * _Input.size().width + iX;
 
 			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
@@ -281,16 +281,18 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 			int fXEnd = _ConvFilter[fIndex].second % kernel.cols;
 			for (int fY = fYStart; fY <= fYEnd; fY++) {
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
-					//std::cout << "K" << fY * kernel.cols + fX << "+=" << input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX) << "|";
 					//Kernel 업데이트
 					kOutput.at<double>(fY, fX) += input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX);
 				}
 			}
+#pragma endregion
+			//평균값 계산
+			//kOutput /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			//std::cout << std::endl;
 		}
 	}
 	kOutput *= learningRate;
-	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
+	std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	kOutput += _Kernel.getMat();
 }
 
@@ -312,7 +314,7 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 		for (int iX = 0; iX < _Input.size().width; iX++) {
 			if (input.at<double>(iY, iX) == 0)
 				continue;
-			//합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
+#pragma region 합성곱 필터로 커널 행렬에 대응하는 Input 행렬 요소를 더함
 			int fIndex = iY * _Input.size().width + iX;
 
 			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
@@ -322,12 +324,15 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 			for (int fY = fYStart; fY <= fYEnd; fY++) {
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
 					//std::cout << "K" << fY * kernel.cols + fX << "+=" << input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX) << "|";
-					output.at<double>(iY, iX) += learningRate * input.at<double>(iY, iX) * kernel.at<double>(fY, fX);
+					output.at<double>(iY, iX) += input.at<double>(iY, iX) * kernel.at<double>(fY, fX);
 				}
 			}
+#pragma endregion
+			//output /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			//std::cout << std::endl;
 		}
 	}
+	output *= learningRate;
 }
 
 void Math::NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w)

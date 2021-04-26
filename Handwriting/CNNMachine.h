@@ -24,16 +24,16 @@ public:
 	
 	//정방향 풀링 시 사용하는 행렬들
 	//데이터 순서 : 데이터 수, 채널 수, 행렬
-	std::vector<std::vector<cv::Mat>> poolresult1;//풀링층 1 결과
-	std::vector<std::vector<cv::Mat>> poolresult1ZeroPadding;//합성곱층 2 입력
-	std::vector<std::vector<cv::Mat>> poolresult2;//풀링층 2 결과
+	std::vector<std::vector<cv::Mat>> pool1result;//풀링층 1 결과
+	std::vector<std::vector<cv::Mat>> pool1resultZeroPadding;//합성곱층 2 입력
+	std::vector<std::vector<cv::Mat>> pool2result;//풀링층 2 결과
 	cv::Size poolSize;
 	cv::Size poolStride;
 	cv::Size pool1ResultSize;
 	cv::Size pool2ResultSize;
 
 	//정방향 완전연결신경망 계산 시 사용하는 행렬들
-	cv::Mat xMat;//완전연결신경망 1층 입력 (poolresult2를 2차원으로 펼친 형태)
+	cv::Mat xMat;//완전연결신경망 1층 입력 (pool2result를 2차원으로 펼친 형태)
 	cv::Mat w1Mat;//완전연결신경망 1층 입력
 	cv::Mat a1Mat;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
 	cv::Mat w2Mat;//완전연결신경망 2층 입력
@@ -61,6 +61,7 @@ public:
 	cv::Mat yLoss;
 	cv::Mat w2T;
 	cv::Mat yLossW2;
+	cv::Mat yLossW2Relu3;
 	cv::Mat yLossW2Relu3W1;
 #pragma endregion
 	double lossAverage;
