@@ -3,19 +3,20 @@
 void CNNMachine::Training(int epoch, double learningRate, double l2)
 {
 	this->learningRate = learningRate;
-	bool autoTraining = true;
+	bool autoTraining = false;
 	lossAverages.push_back(0);
-	for (int i = 1; i <= epoch; i++) {
+	for (nowEpoch = 1; nowEpoch <= epoch; nowEpoch++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
-		std::cout << i << "번째 훈련" << std::endl;
+		std::cout << nowEpoch << "번째 훈련(명령어 0 : Menu 메뉴 열기 | 1: Auto Training | 2 : Model Save 모델 저장 | 3 : Model Load 모델 불러오기" << std::endl;
+		std::cout << "| 4 : Hyper Parameter 하이퍼 파라미터 설정 | 5 : 훈련 설정 | Enter : Debug Log 훈련 행렬 출력 | " << std::endl;
 		
-		//autoTraining이 true면 5초마다 자동 진행, false면 입력까지 기다리기
-		int key = cv::waitKey((int)autoTraining * 8 * USEDATA_NUM);
-  		switch (key) {
-			
+		//autoTraining이 true면 delay마다 자동 진행, false면 입력까지 기다리기
+		int key = cv::waitKey((int)autoTraining * ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay));
+		//std::cout << "현재 waitKey = " << (int)autoTraining * ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay) << std::endl;
+  		
+		switch (key) {
 		case 13: //enter키를 누르면 훈련 행렬 출력
 		{
-
 			std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
 			std::cout << "yMat(정답 행렬) : " << std::endl;
 			std::cout << yMat << std::endl;
@@ -42,24 +43,80 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 			std::cout << w2Mat.at<double>(0, 0) << std::endl;
 			break;
 		}
-		case 49: //1번 키를 누르면 autoTraining 실행/중지
-		{
-			autoTraining = !autoTraining;
-			break;
-		}   
-		case 50: //2번 키를 누르면 모델 저장
-		{
-			if (key == 50) {
-				SaveModel("Model.json", i);
+		case 48: { //0번 키를 누르면 메뉴 열기
+			std::cout << "1 : AutoTraining Delay | 2 : Model Save/Load Name(JSON Format)" << std::endl;
+			int temp = 0;
+			std::cin >> temp;
+			switch (temp) {
+			case 1:
+			{
+				std::cout << "새로운 AutoTraining Deley 입력(현재 Delay : " << ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay) << ")" << std::endl;
+				std::cin >> temp;
+				autoTrainingDelay = temp;
+				std::cout << "Delay 가" << autoTrainingDelay << "으로 설정되었습니다." << std::endl;
+				break;
+			}case 2:
+			{
+				break;
+			}
 			}
 			break;
 		}
-		default://이외 아무키나 누르면 autoTraining 중지
+		case 49: //1번 키를 누르면 자동 훈련
 		{
-			if (key != -1) {
-				autoTraining = false;
+			autoTraining = !autoTraining;
+			if (autoTraining)
+				std::cout << "이제부터 자동 훈련을 진행합니다." << std::endl;
+			else
+				std::cout << "이제부터 자동 훈련을 해제합니다." << std::endl;
+			break;
+		}
+		case 50: //2번 키를 누르면 모델 저장
+		{
+			//훈련을 한번이라도 한 경우에만 저장 가능
+			if (nowEpoch > 1) {
+				if (SaveModel("Model.json")) {
+					std::cout << "저장 성공, 계속 훈련 진행" << std::endl;
+					nowEpoch--;
+					continue;
+				}
 			}
 			break;
+		}
+		case 51: //3번 키를 누르면 모델 로드
+		{
+			if (LoadModel("Model.json")) {
+				std::cout << "로드된 모델로 훈련 시작" << std::endl;
+				nowEpoch--;
+				continue;
+			}
+			break;
+		}
+		case 52: //4번 키를 누르면 하이퍼 파라미터 설정
+		{
+			std::cout << "1 : Learning Rate 학습률 | 2 : L1 라쏘 | 3 : L2 릿지" << std::endl;
+			int temp = 0;
+			std::cin >> temp;
+			switch (temp) {
+				case 1:
+				{
+					std::cout << "새로운 Learning Rate 입력(현재 Learning Rate : " << learningRate << ")" << std::endl;
+					std::cin >> temp;
+					learningRate = temp;
+					std::cout << "Learning Rate 가" << learningRate << "으로 설정되었습니다." << std::endl;
+					break;
+				}case 2:
+				{
+					break;
+				}case 3:
+				{
+					break;
+				}
+			}
+
+			break;
+		}
+		default: {
 		}
 		}
 
@@ -74,45 +131,59 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		}
 		//loss /= -yMat.rows;
 		loss *= -1;
-		lossAverages.push_back(lossAverages[i - 1] + loss / i);
+		lossAverages.push_back(lossAverages[nowEpoch - 1] + loss / nowEpoch);
 		//std::cout << i<<"yMat : " << yMat << std::endl;
 		//std::cout << "yHatMat : " << yHatMat << std::endl;
 		std::cout << "코스트 : " << loss << std::endl;
-		std::cout << "코스트 평균 : " << lossAverages[i] << std::endl;
+		std::cout << "코스트 평균 : " << lossAverages[nowEpoch] << std::endl;
 		std::cout << "역방향 계산 중..." << std::endl;
 		BackPropagation(learningRate);
 		
 		if (loss < 0.5) {
-			SaveModel("Model.json", i);
+			SaveModel("Model.json");
 			break;
 		}
 	}
 }
 
-void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec)
+void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num)
 {
+	
+	std::vector<cv::Mat> trainingVec;	   
+	std::vector<uchar> labelVec;
+	op->MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
+	op->MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
+
 	for (int i = 0; i < trainingVec.size(); i++) {
 		trainingMats.push_back(cv::Mat());
+		x1ZeroPaddingMats.push_back(cv::Mat_<double>());
+
 		//uchar형 행렬 요소를 double형 행렬 요소로 타입 캐스팅
 		trainingVec[i].convertTo(trainingMats[i], CV_64FC1);
 		//평균을 계산해 간단한 특성 스케일 표준화
 		trainingMats[i] /= 255;
 	}
 
+	this->useData_Num = useData_Num;
+	this->kernel1_Num = kernel1_Num;
+	this->kernel2_Num = kernel2_Num;
+	this->classification_Num = classification_Num;
+
 	poolStride = cv::Size(2, 2);
 	poolSize = cv::Size(2, 2);
+
 #pragma region 모든 가중치 행렬을 균등 분포로 랜덤 초기화, 커널 역방향 계산 필터 초기화
 	cv::RNG gen(cv::getTickCount());
-
 	//커널 1은 채널 한개(입력층 채널이 흑백 단일)
+	
 	kernels1.push_back(std::vector<cv::Mat>());
-	for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
+	for (int k1i = 0; k1i < kernel1_Num; k1i++) {
 		kernels1[0].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(2));
 
 		kernels2.push_back(std::vector<cv::Mat>());
 		//커널 2는 채널이 커널 1의 개수
-		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
+		for (int k2i = 0; k2i < kernel2_Num; k2i++) {
 			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(2));
 		}
@@ -127,18 +198,20 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 		wHeight = (wHeight - poolSize.height) / poolStride.height + 1;
 	int wWidth = (trainingMats[0].cols - poolSize.width) / poolStride.width + 1;
 		wWidth = (wWidth - poolSize.width) / poolStride.width + 1;
-	w1Mat.create(cv::Size(10, wHeight * wWidth * KERNEL2_NUM), CV_64FC1);
+	w1Mat.create(cv::Size(10, wHeight * wWidth * kernel2_Num), CV_64FC1);
 	gen.fill(w1Mat, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
-	w2Mat.create(cv::Size(CLASSIFICATIONNUM, w1Mat.cols), CV_64FC1);
+	w2Mat.create(cv::Size(classification_Num, w1Mat.cols), CV_64FC1);
 	gen.fill(w2Mat, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 
 	
 #pragma endregion
 #pragma region 합성곱 결과, 합성곱 결과 제로 패딩, 풀링 결과, 풀링 결과 제로 패딩, 풀링 역방향 계산 필터 행렬 초기화
+	
+
 	for (int i = 0; i < trainingMats.size(); i++) {
 		conv1Mats.push_back(std::vector<cv::Mat>());
-		conv1Bias.push_back(std::vector<double>());
 		conv2Mats.push_back(std::vector<cv::Mat>());
+		conv1Bias.push_back(std::vector<double>());
 		conv2Bias.push_back(std::vector<double>());
 		conv1ZeroPaddingMats.push_back(std::vector<cv::Mat>());
 		conv2ZeroPaddingMats.push_back(std::vector<cv::Mat>());
@@ -148,7 +221,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 
 		pool1BackpropFilters.push_back(std::vector<cv::Mat>());
 		pool2BackpropFilters.push_back(std::vector<cv::Mat>());
-		for (int j = 0; j < KERNEL1_NUM; j++) {
+		for (int j = 0; j < kernel1_Num; j++) {
 			conv1Mats[i].push_back(cv::Mat_<double>());
 			conv1Bias[i].push_back(0);
 			conv1ZeroPaddingMats[i].push_back(cv::Mat_<double>());
@@ -157,7 +230,7 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 		
 			pool1BackpropFilters[i].push_back(cv::Mat_<double>());
 		}
-		for (int j = 0; j < KERNEL2_NUM; j++) {
+		for (int j = 0; j < kernel2_Num; j++) {
 			conv2Mats[i].push_back(cv::Mat_<double>());
 			conv2Bias[i].push_back(0);
 			conv2ZeroPaddingMats[i].push_back(cv::Mat_<double>());
@@ -190,11 +263,12 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 	for (int r2i = 0; r2i < r2Size; r2i++) {
 		conv2BackpropFilters.push_back(std::pair<int, int>());
 	}
+	
 	//손실 함수를 합성곱2 결과에 대해 미분한 행렬 초기화
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		yLossW2Relu3W1UpRelu2.push_back(std::vector<cv::Mat>());
 		yLossW2Relu3W1UpRelu2P1UpRelu.push_back(std::vector<cv::Mat>());
-		for (int k2n = 0; k2n < KERNEL2_NUM; k2n++) {
+		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 			yLossW2Relu3W1UpRelu2[x1i].push_back(cv::Mat());
 		}
 		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
@@ -204,13 +278,13 @@ void CNNMachine::Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& l
 #pragma endregion
 
 	//정답 데이터를 벡터로 변환한다.
-	yMat = cv::Mat::zeros(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_64FC1);
+	yMat = cv::Mat::zeros(cv::Size(classification_Num, trainingMats.size()), CV_64FC1);
 	for (int y = 0; y < labelVec.size(); y++) {
 		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
 		yMat.at<double>(y, labelVec[y]) = 1;
 	}
 
-	yHatMat.create(cv::Size(CLASSIFICATIONNUM, trainingMats.size()), CV_64FC1);
+	yHatMat.create(cv::Size(classification_Num, trainingMats.size()), CV_64FC1);
 
 }
 
@@ -222,11 +296,10 @@ void CNNMachine::ForwardPropagation()
 
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		tempArr.push_back(std::vector<double>());
-		x1ZeroPaddingMats.push_back(cv::Mat_<double>());
 
 		Math::CreateZeroPadding(trainingMats[x1i], x1ZeroPaddingMats[x1i], trainingMats[0].size(), kernels1[0][0].size(), kernel1Stride);
 		//합성곱층 1
-		for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
+		for (int k1i = 0; k1i < kernel1_Num; k1i++) {
 			Math::Convolution(x1ZeroPaddingMats[x1i], conv1Mats[x1i][k1i], trainingMats[0].size(), kernels1[0][k1i], kernel1Stride);
 			conv1Mats[x1i][k1i] += conv1Bias[x1i][k1i];
 			Math::Relu(conv1Mats[x1i][k1i], conv1Mats[x1i][k1i]);
@@ -238,8 +311,8 @@ void CNNMachine::ForwardPropagation()
 		//합성곱층 2
 		/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1result행렬과
 		합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
-		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
-			for (int k1i = 0; k1i < KERNEL1_NUM; k1i++) {
+		for (int k2i = 0; k2i < kernel2_Num; k2i++) {
+			for (int k1i = 0; k1i < kernel1_Num; k1i++) {
 				Math::Convolution(pool1resultZeroPadding[x1i][k1i], conv2Mats[x1i][k2i], pool1result[0][0].size(), kernels2[k1i][k2i], kernel2Stride);
 			}
 			conv2Mats[x1i][k2i] += conv2Bias[x1i][k2i];
@@ -251,7 +324,7 @@ void CNNMachine::ForwardPropagation()
 		//4차원 pool2result를 2차원 행렬 xMat으로 변환
 		//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
 		//vec<vec<double>> to Mat 변환 : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
-		for (int k2i = 0; k2i < KERNEL2_NUM; k2i++) {
+		for (int k2i = 0; k2i < kernel2_Num; k2i++) {
 			tempMat = pool2result[x1i][k2i];
 			/*imshow("Window", trainingMats[x1i]);
 			cv::namedWindow("Windowaa", cv::WINDOW_NORMAL);
@@ -317,7 +390,7 @@ void CNNMachine::BackPropagation(double learningRate)
 	//벡터곱을 위해 yLossW2Relu3W1를 풀링2 결과 행렬 크기로 변환
 	/*for (int i = 0; i < trainingMats.size(); i++) {
 		yLossW2Relu3W1Temp.push_back(std::vector<cv::Mat>());
-		for (int j = 0; j < KERNEL2_NUM; j++) {
+		for (int j = 0; j < kernel2_Num; j++) {
 			cv::Mat sample = yLossW2Relu3W1.row(i).reshape(1, pool2result[0].size()).row(j).reshape(1, pool2result[0][0].rows);
 			yLossW2Relu3W1Temp[i].push_back(sample);
 		}
@@ -326,7 +399,7 @@ void CNNMachine::BackPropagation(double learningRate)
 	//차원 변환된 yLossW2Relu3W1를 풀링2 필터로 Up-Sampleling 후 Relu(Conv2)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		//yLossW2Relu3W1UpRelu2.push_back(std::vector<cv::Mat>());
-		for (int k2n = 0; k2n < KERNEL2_NUM; k2n++) {
+		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 			//yLossW2Relu3W1UpRelu2[x1i].push_back(cv::Mat());
 			//Pooling 함수 역방향 계산으로 풀링 필터 할당
 			Math::GetMaxPoolingFilter(conv2ZeroPaddingMats[x1i][k2n], pool2BackpropFilters[x1i][k2n], pool2result[x1i][k2n], poolSize, poolStride);
@@ -453,33 +526,109 @@ void CNNMachine::BackPropagation(double learningRate)
 	
 }
 
-void CNNMachine::SaveModel(cv::String fileName, int nowEpoch)
+bool CNNMachine::SaveModel(cv::String fileName)
 {
 	cv::FileStorage fs = cv::FileStorage(fileName, cv::FileStorage::WRITE);
 
 	if (!fs.isOpened()) {
 		std::cerr << "File open Failed!!!" << std::endl;
-		return;
+		return false;
 	}
-	fs << "LearningRate" << learningRate;
-	fs << "loss" << loss;
-	fs << "lossAverages" << lossAverages;
-	fs << "NowEpoch" << nowEpoch;
-	fs << "USEDATA_NUM" << USEDATA_NUM;
-	fs << "KERNEL1_NUM" << KERNEL1_NUM;
-	fs << "KERNEL2_NUM" << KERNEL2_NUM;
-	fs << "L1" << 0;
-	fs << "L2" << 0;
-	fs << "Kernels1" << kernels1;
-	fs << "Kernels2" << kernels2;
-	fs << "Conv1Bias" << conv1Bias;
-	fs << "Conv2Bias" << conv2Bias;
-	fs << "w1Mat" << w1Mat;
-	fs << "w2Mat" << w2Mat;
-	fs << "Bias1" << bias1;
-	fs << "Bias2" << bias2;
+	fs << "LearningRate"		<< learningRate;
+	fs << "loss"				<< loss;
+	fs << "lossAverages"		<< lossAverages;
+	fs << "NowEpoch"			<< nowEpoch;
+	fs << "USEDATA_NUM"			<< useData_Num;
+	fs << "KERNEL1_NUM"			<< kernel1_Num;
+	fs << "KERNEL2_NUM"			<< kernel2_Num;
+	fs << "CLASSIFICATION_NUM"	<< classification_Num;
+	fs << "L1"					<< 0;
+	fs << "L2"					<< 0;
+	fs << "PoolSize"			<< poolSize;
+	fs << "PoolStride"			<< poolStride;
+	fs << "Kernel1Stride"		<< kernel1Stride;
+	fs << "Kernel2Stride"		<< kernel2Stride;
 
-	std::cout << "File write Completed!!!" << std::endl;
+	fs << "Kernels1"			<< kernels1;
+	fs << "Kernels2"			<< kernels2;
+	fs << "Conv1Bias"			<< conv1Bias;
+	fs << "Conv2Bias"			<< conv2Bias;
+	fs << "w1Mat"				<< w1Mat;
+	fs << "w2Mat"				<< w2Mat;
+	fs << "Bias1"				<< bias1;
+	fs << "Bias2"				<< bias2;
+
+	std::cout << "Model Save Completed!!!" << std::endl;
+	fs.release();
+	return true;
 }
 
+bool CNNMachine::LoadModel(cv::String fileName)
+{
+	cv::FileStorage fs = cv::FileStorage(fileName, cv::FileStorage::READ);
 
+	if (!fs.isOpened()) {
+		std::cerr << "File open Failed!!!" << std::endl;
+		return false;
+	}
+	std::cout << kernels1.size() << std::endl;
+
+	fs["LearningRate"]		>> learningRate;
+	fs["loss"]				>> loss;
+	fs["NowEpoch"]			>> nowEpoch;
+	fs["USEDATA_NUM"]		>> useData_Num;
+	fs["KERNEL1_NUM"]		>> kernel1_Num;
+	fs["KERNEL2_NUM"]		>> kernel2_Num;
+	//fs["CLASSIFICATION_NUM"]>> classification_Num;
+	fs["L1"]				>> 0;
+	fs["L2"]				>> 0;
+	//fs["PoolSize"]			>> poolSize;
+	//fs["PoolStride"]		>> poolStride;
+	//fs["Kernel1Stride"]		>> kernel1Stride;
+	//fs["Kernel2Stride"]		>> kernel2Stride;
+
+	ReleaseVectors();
+	Init(op, useData_Num, kernel1_Num, kernel2_Num, classification_Num);
+	fs["lossAverages"]		>> lossAverages;
+	fs["Kernels1"]			>> kernels1;
+	fs["Kernels2"]			>> kernels2;
+	fs["Conv1Bias"]			>> conv1Bias;
+	fs["Conv2Bias"]			>> conv2Bias;
+	fs["w1Mat"]				>> w1Mat;
+	fs["w2Mat"]				>> w2Mat;
+	fs["Bias1"]				>> bias1;
+	fs["Bias2"]				>> bias2;
+	std::cout << kernels1.size() << std::endl;
+
+	std::cout << "Model Load Completed!!!" << std::endl;
+	fs.release();
+	return true;
+}
+
+void CNNMachine::ReleaseVectors()
+{
+	lossAverages.clear();
+
+	trainingMats.clear();
+	x1ZeroPaddingMats.clear(); 
+	kernels1.clear();
+	kernels2.clear(); 
+	conv1Mats.clear();
+	conv2Mats.clear();
+	conv1Bias.clear();
+	conv2Bias.clear();
+	conv1ZeroPaddingMats.clear();
+	conv2ZeroPaddingMats.clear();
+	pool1result.clear();
+	pool2result.clear();
+	pool1resultZeroPadding.clear();
+	pool1BackpropFilters.clear();
+	pool2BackpropFilters.clear(); 
+	conv2BackpropFilters.clear();
+	conv1BackpropFilters.clear();
+	yLossW2Relu3W1UpRelu2.clear();
+	yLossW2Relu3W1UpRelu2P1UpRelu.clear();
+
+	w1Mat.release();
+	a1Mat.release();
+}

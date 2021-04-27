@@ -57,9 +57,9 @@ int main() {
 	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
 	op.MatPrint(trainingVec, labelVec);
 	CNNMachine cnn;
-	cnn.Init(trainingVec, labelVec);
+	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
 
-	cnn.Training(1000, 0.00005/USEDATA_NUM, 1);
+	cnn.Training(1000, 0.001/USEDATA_NUM, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트

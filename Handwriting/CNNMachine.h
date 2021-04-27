@@ -76,12 +76,24 @@ public:
 	std::vector<double> lossAverages;  
 	double loss;
 	double learningRate;
+	int nowEpoch;
+
+	int useData_Num;
+	int kernel1_Num;
+	int kernel2_Num;
+	int classification_Num = CLASSIFICATIONNUM;
+
+	int autoTrainingDelay;
+	OpencvPractice* op;
+
 public:
 	void Training(int epoch, double learningRate, double l2);
-	void Init(std::vector<cv::Mat>& trainingVec, std::vector<uint8_t>& labelVec);
+	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num);
 	//정방향 계산
 	void ForwardPropagation();
 	void BackPropagation(double learningRate);
-	void SaveModel(cv::String fileName, int nowEpoch);
+	bool SaveModel(cv::String fileName);
+	bool LoadModel(cv::String fileName);
+	void ReleaseVectors();
 };
 
