@@ -74,16 +74,16 @@ public:
 	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2P1UpRelu; //손실 함수를 합성곱1 결과에 대해 미분한 값
 #pragma endregion
 	std::vector<double> lossAverages;  
-	double loss;
-	double learningRate;
-	int nowEpoch;
+	double loss = 0;
+	double learningRate = 0;
+	int nowEpoch = 0;
 
-	int useData_Num;
-	int kernel1_Num;
-	int kernel2_Num;
+	int useData_Num = 0;
+	int kernel1_Num = 0;
+	int kernel2_Num = 0;
 	int classification_Num = CLASSIFICATIONNUM;
 
-	int autoTrainingDelay;
+	int autoTrainingDelay = 0;
 	bool autoTraining = false;
 	cv::TickMeter trainingTickMeter;
 	OpencvPractice* op;
@@ -100,4 +100,3 @@ public:
 	//훈련을 진행할경우 true, 진행하지 않을 경우 false 리턴
 	bool KeyEvent(int key);
 };
-

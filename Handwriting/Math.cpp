@@ -102,9 +102,9 @@ void Math::MaxPooling(cv::InputArray _Input, cv::OutputArray _Output, const cv::
 		//std::cout << "풀링 연산 불가하므로 제로 패딩 추가" << std::endl;
 		outputHeight = cvRound(outputHeight);
 		outputWidth = cvRound(outputWidth);
-		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, cv::Size(outputWidth, outputHeight),poolSize, stride);
+		Math::CreateZeroPadding(zeroPaddingMat, zeroPaddingMat, cv::Size((int)outputWidth, (int)outputHeight),poolSize, stride);
 	}
-	_Output.create(cv::Size(outputWidth, outputHeight), zeroPaddingMat.type());
+	_Output.create(cv::Size((int)outputWidth, (int)outputHeight), zeroPaddingMat.type());
 	_Output.setTo(0);
 	cv::Mat output = _Output.getMat();
 	
@@ -245,7 +245,7 @@ void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<i
 }
 
 
-void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, float learningRate)
+void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, double learningRate)
 {
 	cv::Mat zeroPaddingMat = _ConvZeroPadInput.getMat();
 	const int filterRows = _Kernel.size().height;
@@ -302,7 +302,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 	kOutput += _Kernel.getMat();
 }
 
-void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, float learningRate)
+void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, double learningRate)
 {
 	cv::Mat input = _Input.getMat();
 	cv::Mat kernel = _Kernel.getMat();

@@ -48,7 +48,7 @@ void OpencvPractice::RandomImage(cv::String imgPath = "Resource/Image/lenna.bmp"
 	{
 		cv::moveWindow("Image", posR(gen), posR(gen));
 		cv::resizeWindow("Image", sizeR(gen), sizeR(gen));
-		if (cv::waitKey(delay) == 27)
+		if (cv::waitKeyEx(delay) == 27)
 			break;
 	}
 	cv::destroyAllWindows();
@@ -100,7 +100,7 @@ void OpencvPractice::ImagePrint(cv::String imgName)
 	cv::imshow("img2", img2);
 	cv::imshow("img3", img3);
 
-	cv::waitKey();
+	cv::waitKeyEx();
 	cv::destroyAllWindows();
 }
 
@@ -126,7 +126,7 @@ void OpencvPractice::Camera_In()
 		cv::imshow("inversed", inversed);
 		
 
-		if (cv::waitKey(delay) == 27) //ESC 키
+		if (cv::waitKeyEx(delay) == 27) //ESC 키
 			break;
 	}
 	cv::destroyAllWindows();
@@ -147,8 +147,8 @@ void OpencvPractice::Video_In(cv::String videoPath, double winScale)
 
 	cv::namedWindow("Basic", cv::WINDOW_NORMAL);
 	cv::namedWindow("Inversed", cv::WINDOW_NORMAL);
-	cv::resizeWindow("Basic", cap.get(cv::CAP_PROP_FRAME_WIDTH) * winScale, cap.get(cv::CAP_PROP_FRAME_HEIGHT) * winScale);
-	cv::resizeWindow("Inversed", cap.get(cv::CAP_PROP_FRAME_WIDTH) * winScale, cap.get(cv::CAP_PROP_FRAME_HEIGHT) * winScale);
+	cv::resizeWindow("Basic", (int)(cap.get(cv::CAP_PROP_FRAME_WIDTH) * winScale), (int)(cap.get(cv::CAP_PROP_FRAME_HEIGHT) * winScale));
+	cv::resizeWindow("Inversed", (int)(cap.get(cv::CAP_PROP_FRAME_WIDTH) * winScale),(int)(cap.get(cv::CAP_PROP_FRAME_HEIGHT) * winScale));
 
 	cv::Mat frame, inversed;
 	while (true) {
@@ -159,7 +159,7 @@ void OpencvPractice::Video_In(cv::String videoPath, double winScale)
 
 		cv::imshow("Basic", frame);
 		cv::imshow("Inversed", inversed);
-		if (cv::waitKey(delay) == 27)
+		if (cv::waitKeyEx(delay) == 27)
 			break;
 	}
 	cv::destroyAllWindows();
@@ -194,7 +194,7 @@ void OpencvPractice::Camera_In_Video_Out(cv::String savePath)
 		cv::imshow("frame", frame);
 		cv::imshow("inversed", inversed);
 		
-		if (cv::waitKey(delay) == 27)
+		if (cv::waitKeyEx(delay) == 27)
 			break;
 	}
 	cv::destroyAllWindows();
@@ -236,7 +236,7 @@ void OpencvPractice::FaceScan()
 			cv::imshow("webcam", frame);
 		}
 
-		if (cv::waitKey(200) == 27) //ESC 키
+		if (cv::waitKeyEx(200) == 27) //ESC 키
 			break;
 	}
 	cv::destroyAllWindows();
@@ -253,7 +253,7 @@ void OpencvPractice::MatPrint(std::vector<cv::Mat>& trainingVec, std::vector<cv:
 		imshow("Window", trainingVec[i]);
 		//std::cout << i << "번째 이미지 정답 : " << (int)labelVec[i] <<std::endl;
 		//아무 키나 누르면 다음
-		/*if (cv::waitKey(0) != -1)
+		/*if (cv::waitKeyEx(0) != -1)
 			continue;*/
 	}
 }

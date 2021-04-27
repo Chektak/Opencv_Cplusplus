@@ -12,7 +12,12 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		std::cout << "[ 4 : Hyper Parameter 하이퍼 파라미터 설정 | Enter : Debug Log 훈련 행렬 출력 ] " << std::endl;
 		
 		//autoTraining이 true면 delay마다 자동 진행, false면 입력까지 기다리기
-		int key = cv::waitKey((int)autoTraining * ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay));
+		//키 버퍼 초기화
+		int key = 0;
+		while (key != -1) {
+			key = cv::waitKeyEx(1);
+		}
+		key = cv::waitKeyEx((int)autoTraining * ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay));
 		if (KeyEvent(key) == false){
 			continue;
 		}
@@ -48,8 +53,13 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 	
 	std::vector<cv::Mat> trainingVec;	   
 	std::vector<uchar> labelVec;
-	op->MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
-	op->MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
+	this->useData_Num = useData_Num;
+	this->kernel1_Num = kernel1_Num;
+	this->kernel2_Num = kernel2_Num;
+	this->classification_Num = classification_Num;
+
+	op->MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, useData_Num);
+	op->MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, useData_Num);
 
 	for (int i = 0; i < trainingVec.size(); i++) {
 		trainingMats.push_back(cv::Mat());
@@ -61,10 +71,7 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 		trainingMats[i] /= 255;
 	}
 
-	this->useData_Num = useData_Num;
-	this->kernel1_Num = kernel1_Num;
-	this->kernel2_Num = kernel2_Num;
-	this->classification_Num = classification_Num;
+	
 
 	poolStride = cv::Size(2, 2);
 	poolSize = cv::Size(2, 2);
@@ -233,7 +240,7 @@ void CNNMachine::ForwardPropagation()
 	xMat.create(cv::Size(0, tempArr[0].size()), CV_64FC1);
 
 	//훈련 데이터 수만큼 반복
-	for (unsigned int i = 0; i < tempArr.size(); ++i)
+	for (int i = 0; i < tempArr.size(); ++i)
 	{
 		// Make a temporary cv::Mat row and add to NewSamples _without_ data copy
 		cv::Mat Sample(1, tempArr[0].size(), CV_64FC1, tempArr[i].data());
@@ -354,14 +361,14 @@ void CNNMachine::BackPropagation(double learningRate)
 #pragma endregion
 
 #pragma region 완전연결신경망층 가중치 행렬 역방향 계산
-	w1Mat -= learningRate * xMat.t() * (yLossW2Relu3) / yLossW2Relu3.rows;//평균을 계산해 간단한 특성 스케일 표준화
+	w1Mat -= learningRate * xMat.t() * (yLossW2Relu3);// / yLossW2Relu3.rows;//평균을 계산해 간단한 특성 스케일 표준화
 	double bias1Backprop = 0;
 	for (int y = 0; y < yLossW2Relu3.rows; y++) {
 		for (int x = 0; x < yLossW2Relu3.cols; x++) {
 			bias1Backprop += yLossW2Relu3.at<double>(y, x);
 		}
 	}
-	bias1 -= learningRate * bias1Backprop / yLossW2Relu3.rows * yLossW2Relu3.cols;
+	bias1 -= learningRate * bias1Backprop;// / yLossW2Relu3.rows * yLossW2Relu3.cols;
 	
 	w2Mat -= learningRate * (a1Mat.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 표준화
 	double bias2Backprop = 0;
@@ -427,13 +434,13 @@ bool CNNMachine::LoadModel(cv::String fileName)
 	fs["USEDATA_NUM"]		>> useData_Num;
 	fs["KERNEL1_NUM"]		>> kernel1_Num;
 	fs["KERNEL2_NUM"]		>> kernel2_Num;
-	//fs["CLASSIFICATION_NUM"]>> classification_Num;
+	fs["CLASSIFICATION_NUM"]>> classification_Num;
 	fs["L1"]				>> 0;
 	fs["L2"]				>> 0;
-	//fs["PoolSize"]			>> poolSize;
-	//fs["PoolStride"]		>> poolStride;
-	//fs["Kernel1Stride"]		>> kernel1Stride;
-	//fs["Kernel2Stride"]		>> kernel2Stride;
+	fs["PoolSize"]			>> poolSize;
+	fs["PoolStride"]		>> poolStride;
+	fs["Kernel1Stride"]		>> kernel1Stride;
+	fs["Kernel2Stride"]		>> kernel2Stride;
 
 	ReleaseVectors();
 	Init(op, useData_Num, kernel1_Num, kernel2_Num, classification_Num);
@@ -483,16 +490,19 @@ void CNNMachine::ReleaseVectors()
 
 bool CNNMachine::KeyEvent(int key)
 {
+	//입력 버퍼 초기화
+	std::cin.clear();
+
 	switch (key) {
 	case 13: //enter키를 누르면 훈련 행렬 출력
 	{
 		std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
 		std::cout << "yMat(정답 행렬) : " << std::endl;
-		std::cout << yMat << std::endl;
+		std::cout << yMat.row(0) << std::endl;
 		std::cout << "yHatMat(가설 행렬) : " << std::endl;
-		std::cout << yHatMat << std::endl;
+		std::cout << yHatMat.row(0) << std::endl;
 		std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
-		std::cout << yLoss << std::endl;
+		std::cout << yLoss.row(0) << std::endl;
 		std::cout << "kernels1[0][0] : " << std::endl;
 		std::cout << kernels1[0][0] << std::endl;
 		std::cout << "kernels2[0][0] : " << std::endl;
@@ -510,6 +520,8 @@ bool CNNMachine::KeyEvent(int key)
 		std::cout << w1Mat.at<double>(0, 0) << std::endl;
 		std::cout << "w2Mat[0][0]" << std::endl;
 		std::cout << w2Mat.at<double>(0, 0) << std::endl;
+		nowEpoch--;
+		return false;
 		break;
 	}
 	case 48: { //0번 키를 누르면 메뉴 열기
@@ -530,15 +542,21 @@ bool CNNMachine::KeyEvent(int key)
 			break;
 		}
 		}
+		nowEpoch--;
+		return false;
 		break;
 	}
 	case 49: //1번 키를 누르면 자동 훈련
 	{
 		autoTraining = !autoTraining;
-		if (autoTraining)
+		if (autoTraining) {
 			std::cout << "이제부터 자동 훈련을 진행합니다." << std::endl;
-		else
+		}
+		else {
 			std::cout << "자동 훈련을 중지했습니다." << std::endl;
+		}
+		nowEpoch--;
+		return false;
 		break;
 	}
 	case 50: //2번 키를 누르면 모델 저장
@@ -546,11 +564,15 @@ bool CNNMachine::KeyEvent(int key)
 		//훈련을 한번이라도 한 경우에만 저장 가능
 		if (nowEpoch > 1) {
 			if (SaveModel("Model.json")) {
-				nowEpoch--;
 				std::cout << nowEpoch << "번째 훈련 모델로 저장에 성공" << std::endl;
-				return false;
 			}
 		}
+		else
+		{
+			std::cout << "먼저 훈련을 1회 이상 실행하세요." << std::endl;
+		}
+		nowEpoch--;
+		return false;
 		break;
 	}
 	case 51: //3번 키를 누르면 모델 로드
@@ -560,6 +582,8 @@ bool CNNMachine::KeyEvent(int key)
 			nowEpoch--;
 			return false;
 		}
+		nowEpoch--;
+		return false;
 		break;
 	}
 	case 52: //4번 키를 누르면 하이퍼 파라미터 설정
@@ -571,9 +595,10 @@ bool CNNMachine::KeyEvent(int key)
 		case 1:
 		{
 			std::cout << "새로운 Learning Rate 입력(현재 Learning Rate : " << learningRate << ")" << std::endl;
-			std::cin >> temp;
-			learningRate = temp;
-			std::cout << "Learning Rate 가" << learningRate << "으로 설정되었습니다." << std::endl;
+			double newRate = 0;
+			std::cin >> newRate;
+			learningRate = newRate;
+			std::cout << "Learning Rate가 " << learningRate << "으로 설정되었습니다." << std::endl;
 			break;
 		}case 2:
 		{
@@ -583,23 +608,24 @@ bool CNNMachine::KeyEvent(int key)
 			break;
 		}
 		}
-
+		nowEpoch--;
+		return false;
 		break;
 	}
 	default: {
 		if (key == -1 && autoTraining) {
 			//자동 훈련 시 코스트가 0.5 이하일 경우 자동 종료
-			if (loss < 0.5) {
+			/*if (loss < 0.5) {
 				if (SaveModel("Model.json")) {
 					std::cout << "자동 훈련 : 코스트가 0.5 이하이므로 종료합니다" << std::endl;
-					nowEpoch--;
 				}
 				else {
 					std::cout << "저장 실패, 자동 훈련을 종료합니다" << std::endl;
 					autoTraining = false;
 				}
+				nowEpoch--;
 				return false;
-			}
+			}*/
 		}
 	}
 	}
