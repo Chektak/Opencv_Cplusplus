@@ -84,6 +84,8 @@ public:
 	int classification_Num = CLASSIFICATIONNUM;
 
 	int autoTrainingDelay;
+	bool autoTraining = false;
+	cv::TickMeter trainingTickMeter;
 	OpencvPractice* op;
 
 public:
@@ -95,5 +97,7 @@ public:
 	bool SaveModel(cv::String fileName);
 	bool LoadModel(cv::String fileName);
 	void ReleaseVectors();
+	//훈련을 진행할경우 true, 진행하지 않을 경우 false 리턴
+	bool KeyEvent(int key);
 };
 

@@ -268,7 +268,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 	//std::cout << "커널 업데이트" << std::endl;
 	//소수점 4자리까지 출력
 	//std::cout << std::fixed;
-	//std::cout.precision(0);
+	//std::cout.precision(4);
 	//input행렬의 크기는 합성곱이 세임 패딩으로 진행되기에 합성곱 결과 행렬과 같은 크기
 	for (int iY = 0; iY < _Input.size().height; iY++) {
 		for (int iX = 0; iX < _Input.size().width; iX++) {
@@ -371,11 +371,9 @@ void Math::SoftMax(cv::InputArray _Input, cv::OutputArray _Output)
 	for (int y = 0; y < input.rows; y++) {
 		sum = 0;
 		max = 0;
-		//열에 대한 max를 구한다
-		for (int x = 0; x < input.cols; x++) {
-			if (max < input.at<double>(y, x))
-				max = input.at<double>(y, x);
-		}
+		
+		//해당 열의 max를 구한다
+		cv::minMaxLoc(input.row(y), 0, &max, 0, 0);
 		for (int x = 0; x < input.cols; x++) {
 			output.at<double>(y, x) = exp(input.at<double>(y, x) - max);
 			sum += output.at<double>(y, x);

@@ -9,17 +9,17 @@ int main() {
 	//op.FaceScan();
 
 	//소프트맥스 함수 테스트
-	//cv::Mat input = cv::Mat_<double>({2, 3}, {1,3,5,7,9,-600});
-	//cv::Mat w = cv::Mat_<double>({3, 2}, {0, 2, 0, 2, 0, 2});
-	//cv::Mat output;
-	//std::cout << "입력 데이터 :\n" << input << std::endl;
-	//Math::Relu(input, output);
-	//std::cout << "ReLu 연산 후 :\n" << output << std::endl;
-	//Math::SoftMax(output, output);
-	//std::cout << "소프트맥스 연산 후 :\n" << output << std::endl;
-	//Math::NeuralNetwork(output, output, w);
-	//std::cout << "신경망 가중치 행렬 :\n" << w << std::endl;
-	//std::cout << "신경망(행렬곱) 연산 후 :\n" <<output << std::endl;
+	/*cv::Mat input = cv::Mat_<double>({2, 3}, {1,3,5,7,9,-600});
+	cv::Mat w = cv::Mat_<double>({3, 2}, {0, 2, 0, 2, 0, 2});
+	cv::Mat output;
+	std::cout << "입력 데이터 :\n" << input << std::endl;
+	Math::Relu(input, output);
+	std::cout << "ReLu 연산 후 :\n" << output << std::endl;
+	Math::SoftMax(output, output);
+	std::cout << "소프트맥스 연산 후 :\n" << output << std::endl;
+	Math::NeuralNetwork(output, output, w);
+	std::cout << "신경망 가중치 행렬 :\n" << w << std::endl;
+	std::cout << "신경망(행렬곱) 연산 후 :\n" <<output << std::endl;*/
 
 	//시프트 연산 테스트
 	//std::cout << "10진수 2144444444 = 2진수로 "<<std::bitset<32>(2144444444) << std::endl;
@@ -59,6 +59,9 @@ int main() {
 	CNNMachine cnn;
 	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
 
+	//소수점 15자리까지 출력
+	std::cout << std::fixed;
+	std::cout.precision(15);
 	cnn.Training(1000, 0.001/USEDATA_NUM, 1);
 	std::cout << "END" << std::endl;
 
