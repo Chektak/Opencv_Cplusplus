@@ -50,20 +50,20 @@ int main() {
 	//std::cin >> KERNEL1_NUM;
 	//std::cout << "사용할 커널2 수를 입력해주세요." << std::endl;
 	//std::cin >> KERNEL2_NUM;
+	op.PaintWindow("Paint", cv::Size(560, 560));
+	//std::vector<cv::Mat> trainingVec;
+	//std::vector<uchar> labelVec;
+	//op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
+	//op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
+	//op.MatPrint(trainingVec, labelVec);
+	//CNNMachine cnn;
+	//cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
 
-	std::vector<cv::Mat> trainingVec;
-	std::vector<uchar> labelVec;
-	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
-	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
-	op.MatPrint(trainingVec, labelVec);
-	CNNMachine cnn;
-	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
-
-	//소수점 15자리까지 출력
-	std::cout << std::fixed;
-	std::cout.precision(15);
-	cnn.Training(1000, 0.001/USEDATA_NUM, 1);
-	std::cout << "END" << std::endl;
+	////소수점 15자리까지 출력
+	//std::cout << std::fixed;
+	//std::cout.precision(15);
+	//cnn.Training(-1, 0.001/USEDATA_NUM, 1);
+	//std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트
 	//3*3 크기의 입력 행렬, 3*3 크기의 커널 행렬, stride는 1*1 사용

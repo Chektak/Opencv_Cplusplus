@@ -73,6 +73,7 @@ public:
 	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2; //손실 함수를 합성곱2 결과에 대해 미분한 값 (Up은 Up-Sampleling(풀링함수의 미분))
 	std::vector<std::vector<cv::Mat>> yLossW2Relu3W1UpRelu2P1UpRelu; //손실 함수를 합성곱1 결과에 대해 미분한 값
 #pragma endregion
+
 	std::vector<double> lossAverages;  
 	double loss = 0;
 	double learningRate = 0;
@@ -88,12 +89,31 @@ public:
 	cv::TickMeter trainingTickMeter;
 	OpencvPractice* op;
 
+#pragma region 학습된 모델로 예측할 때 사용
+	std::vector<cv::Mat> predictConv1Mats;//합성곱층 1 결과
+	std::vector<cv::Mat> predictConv2Mats;//합성곱층 2 결과
+	std::vector<cv::Mat> predictConv1ZeroPaddingMats;//풀링층 1 입력
+	std::vector<cv::Mat> predictConv2ZeroPaddingMats;//풀링층 2 입력
+
+	//풀링 시 사용하는 행렬들
+	//데이터 순서 : 채널 수, 행렬
+	std::vector<cv::Mat> predictPool1result;//풀링층 1 결과
+	std::vector<cv::Mat> predictPool1resultZeroPadding;//합성곱층 2 입력
+	std::vector<cv::Mat> predictPool2result;//풀링층 2 결과
+
+	cv::Mat predictXMat;//완전연결신경망 1층 입력 (pool2result를 2차원으로 펼친 형태)
+	cv::Mat predictA1Mat;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
+	cv::Mat predictYHatMat;
+#pragma endregion
+
 public:
 	void Training(int epoch, double learningRate, double l2);
 	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num);
 	//정방향 계산
 	void ForwardPropagation();
 	void BackPropagation(double learningRate);
+	void ModelPredict(cv::InputArray _Input);
+
 	bool SaveModel(cv::String fileName);
 	bool LoadModel(cv::String fileName);
 	void ReleaseVectors();

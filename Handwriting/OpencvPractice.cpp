@@ -270,6 +270,122 @@ int OpencvPractice::ReverseInt(int i)
 	return((int)ch1 << 24) + ((int)ch2 << 16) + ((int)ch3 << 8) + ch4;
 }
 
+void OpencvPractice::PaintWindow(cv::InputArray paintMat, cv::OutputArray _Output, cv::String windowName, cv::Size windowSize, int exitAsciiCode, CNNMachine *cnnM)
+{
+	cv::Mat inputScreen = paintMat.getMat();
+	if(inputScreen.empty())
+		inputScreen = cv::Mat::zeros(cv::Size(28, 28), CV_64FC1);
+	cv::Mat output;
+	inputScreen.copyTo(inputScreen);
+
+	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+	cv::setMouseCallback(windowName, CallBackFunc, &output);
+
+	cv::resizeWindow(windowName, windowSize);
+	while (cv::waitKeyEx() != exitAsciiCode) {
+		cv::imshow(windowName, output);
+		cnnM->ModelPredict(output);
+	}
+}
+
+//static 변수 초기화 (http://egloos.zum.com/kaludin/v/2461942)
+cv::Point OpencvPractice::mousePt(0, 0);
+bool OpencvPractice::mouseLeftPress = false;
+bool OpencvPractice::mouseRightPress = false;
+
+void OpencvPractice::CallBackFunc(int event, int x, int y, int flags, void* userdata)
+{
+	std::cout << "pos (" << x << "," << y << ") ";
+	mousePt.x = x;
+	mousePt.y = y;
+	
+	//람다 익명함수 사용
+	auto drawCircle = [](int x, int y, void* userdata) {
+
+		cv::Mat& img = *((cv::Mat*)(userdata)); // 1st cast it back, then deref
+		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
+		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
+		//cv::circle(img, cv::Point(x, y), 2, cv::Scalar(0.8), cv::FILLED, cv::LineTypes::LINE_4);
+		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(1), cv::FILLED, cv::LineTypes::LINE_4);
+	};
+	
+	auto eraserCircle = [](int x, int y, void* userdata) {
+
+		cv::Mat& img = *((cv::Mat*)(userdata)); // 1st cast it back, then deref
+		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
+		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
+		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(0), cv::FILLED, cv::LineTypes::LINE_4);
+	};
+
+	switch (event)
+	{
+	case cv::EVENT_MOUSEMOVE:
+	{
+		std::cout << "cv::EVENT_MOUSEMOVE" << std::endl;
+
+		if (mouseLeftPress == true)
+		{
+			drawCircle(x, y, userdata);
+		}
+		if (mouseRightPress == true) {
+			eraserCircle(x, y, userdata);
+		}
+		break;
+	}
+	case cv::EVENT_LBUTTONDOWN:
+	{
+		std::cout << "cv::EVENT_LBUTTONDOWN" << std::endl;
+
+		mouseLeftPress = true;
+		drawCircle(x, y, userdata);
+		break;
+	}
+	case cv::EVENT_LBUTTONUP:
+	{
+		std::cout << "cv::EVENT_LBUTTONUP" << std::endl;
+
+		mouseLeftPress = false;
+		break;
+	}
+	case cv::EVENT_RBUTTONDOWN:
+		std::cout << "cv::EVENT_RBUTTONDOWN" << std::endl;
+
+		mouseRightPress = true;
+		eraserCircle(x, y, userdata);
+		break;
+	case cv::EVENT_RBUTTONUP:
+		std::cout << "cv::EVENT_RBUTTONUP" << std::endl;
+
+		mouseRightPress = false;
+		break;
+	case cv::EVENT_MBUTTONDOWN:
+		std::cout << "cv::EVENT_MBUTTONDOWN" << std::endl;
+		break;
+	case cv::EVENT_MBUTTONUP:
+		std::cout << "cv::EVENT_MBUTTONUP" << std::endl;
+		break;
+	case cv::EVENT_LBUTTONDBLCLK:
+		std::cout << "cv::EVENT_LBUTTONDBLCLK" << std::endl;
+		break;
+	case cv::EVENT_RBUTTONDBLCLK:
+		std::cout << "cv::EVENT_RBUTTONDBLCLK" << std::endl;
+		break;
+	case cv::EVENT_MBUTTONDBLCLK:
+		std::cout << "cv::EVENT_MBUTTONDBLCLK" << std::endl;
+		break;
+		/*
+		case cv::EVENT_MOUSEWHEEL:
+			std::cout << "cv::EVENT_MOUSEWHEEL" << std::endl;
+			break;
+		case cv::EVENT_MOUSEHWHEEL:
+			std::cout << "cv::EVENT_MOUSEHWHEEL" << std::endl;
+			break;
+		*/
+	}
+}
+
+
+
 //인자로 받은 vector에 Mnist 훈련 데이터를 파싱해 Matrix으로 저장
 void OpencvPractice::MnistTrainingDataRead(std::string filePath, std::vector<cv::Mat>& vec, int readDataNum)
 {
@@ -360,3 +476,4 @@ int OpencvPractice::ConvertCVGrayImageType(int magicNumber)
 	default: return CV_8UC1;
 	}
 }
+

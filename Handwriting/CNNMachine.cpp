@@ -5,7 +5,8 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 	this->learningRate = learningRate;
 	
 	lossAverages.push_back(0);
-	for (nowEpoch = 1; nowEpoch <= epoch; nowEpoch++) {
+	//epoch가 0 이하로 입력되면 무한 반복
+	for (nowEpoch = 1; (epoch <= 0) ? true : nowEpoch <= epoch; nowEpoch++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
 		std::cout << nowEpoch << "번째 훈련" << std::endl;
 		std::cout << "[명령어 0 : Menu 열기 | 1 : Auto Training | 2 : Model Save 모델 저장 | 3 : Model Load 모델 불러오기" << std::endl;
@@ -14,10 +15,10 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		//autoTraining이 true면 delay마다 자동 진행, false면 입력까지 기다리기
 		//키 버퍼 초기화
 		int key = 0;
-		while (key != -1) {
-			key = cv::waitKeyEx(1);
-		}
-		key = cv::waitKeyEx((int)autoTraining * ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay));
+		//while (key != -1) {
+		//	key = cv::waitKeyEx(1);
+		//}
+		key = cv::waitKeyEx((int)autoTraining * ((autoTrainingDelay <= 0) ? trainingTickMeter.getTimeMilli() + 200 : autoTrainingDelay));
 		if (KeyEvent(key) == false){
 			continue;
 		}
@@ -381,6 +382,68 @@ void CNNMachine::BackPropagation(double learningRate)
 #pragma endregion
 }
 
+void CNNMachine::ModelPredict(cv::InputArray _Input)
+{
+	//합성곱층 결과 행렬을 완전연결신경망 입력으로 변환할 때 사용
+	std::vector<double> tempArr;
+	cv::Mat tempMat;
+
+	cv::Mat input = _Input.getMat();
+	cv::Mat inputZeroPad;
+
+	tempArr.push_back(0);
+
+	Math::CreateZeroPadding(input, inputZeroPad, input.size(), kernels1[0][0].size(), kernel1Stride);
+
+	//합성곱층 1
+	for (int k1i = 0; k1i < kernel1_Num; k1i++) {
+		Math::Convolution(inputZeroPad, predictConv1Mats[k1i], trainingMats[0].size(), kernels1[0][k1i], kernel1Stride);
+		predictConv1Mats[k1i] += conv1Bias[x1i][k1i];
+		Math::Relu(predictConv1Mats[k1i], predictConv1Mats[k1i]);
+		Math::CreateZeroPadding(predictConv1Mats[k1i], predictConv1ZeroPaddingMats[k1i], pool1ResultSize, poolSize, poolStride);
+		Math::MaxPooling(predictConv1ZeroPaddingMats[k1i], predictPool1result[k1i], poolSize, poolStride);
+
+		Math::CreateZeroPadding(predictPool1result[k1i], predictPool1resultZeroPadding[x1i][k1i], pool1result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
+	}
+	//합성곱층 2
+	/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1result행렬과
+	합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
+	for (int k2i = 0; k2i < kernel2_Num; k2i++) {
+		for (int k1i = 0; k1i < kernel1_Num; k1i++) {
+			Math::Convolution(predictPool1resultZeroPadding[k1i], predictConv2Mats[k2i], pool1result[0][0].size(), kernels2[k1i][k2i], kernel2Stride);
+		}
+		predictConv2Mats[k2i] += conv2Bias[x1i][k2i];
+		Math::Relu(predictConv2Mats[k2i], predictConv2Mats[k2i]);
+		Math::CreateZeroPadding(predictConv2Mats[k2i], predictConv2ZeroPaddingMats[k2i], pool2ResultSize, poolSize, poolStride);
+		Math::MaxPooling(predictConv2ZeroPaddingMats[k2i], predictPool2result[k2i], poolSize, poolStride);
+	}
+	//완전연결신경망 입력
+	//4차원 pool2result를 2차원 행렬 xMat으로 변환
+	//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
+	//vec<vec<double>> to Mat 변환 : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
+	for (int k2i = 0; k2i < kernel2_Num; k2i++) {
+		tempMat = predictPool2result[k2i];
+		for (int i = 0; i < tempMat.rows; ++i) {
+			tempArr.insert(tempArr.end(), tempMat.ptr<double>(i), tempMat.ptr<double>(i) + tempMat.cols * tempMat.channels());
+		}
+	}
+
+	cv::Mat predictNeuralInputMat;
+	predictNeuralInputMat.create(cv::Size(0, tempArr.size()), CV_64FC1);
+
+	cv::Mat Sample(1, tempArr.size(), CV_64FC1, tempArr.data());
+	predictXMat.push_back(Sample);
+
+	Math::NeuralNetwork(predictXMat, predictA1Mat, w1Mat);
+	predictA1Mat += bias1;
+	Math::Relu(predictA1Mat, predictA1Mat);
+
+	Math::NeuralNetwork(predictA1Mat, predictYHatMat, w2Mat);
+
+	predictYHatMat += bias2;
+	Math::SoftMax(predictYHatMat, predictYHatMat);
+}
+
 bool CNNMachine::SaveModel(cv::String fileName)
 {
 	cv::FileStorage fs = cv::FileStorage(fileName, cv::FileStorage::WRITE);
@@ -498,11 +561,11 @@ bool CNNMachine::KeyEvent(int key)
 	{
 		std::cout << "정방향 계산에서 얻은 yMat, yHatMat, yLoss로 역방향 계산 끝. " << std::endl;
 		std::cout << "yMat(정답 행렬) : " << std::endl;
-		std::cout << yMat.row(0) << std::endl;
+		std::cout << yMat << std::endl;
 		std::cout << "yHatMat(가설 행렬) : " << std::endl;
-		std::cout << yHatMat.row(0) << std::endl;
+		std::cout << yHatMat << std::endl;
 		std::cout << "yLoss (= -(yMat - yHatMat)) : " << std::endl;
-		std::cout << yLoss.row(0) << std::endl;
+		std::cout << yLoss << std::endl;
 		std::cout << "kernels1[0][0] : " << std::endl;
 		std::cout << kernels1[0][0] << std::endl;
 		std::cout << "kernels2[0][0] : " << std::endl;
@@ -525,20 +588,29 @@ bool CNNMachine::KeyEvent(int key)
 		break;
 	}
 	case 48: { //0번 키를 누르면 메뉴 열기
-		std::cout << "1 : AutoTraining Delay | 2 : Model Save/Load Name(JSON Format)" << std::endl;
+		std::cout << "1 : AutoTraining Delay | 2 : Model Save/Load Name(JSON Format) | 3 : HandWriting" << std::endl;
 		int temp = 0;
 		std::cin >> temp;
 		switch (temp) {
 		case 1:
 		{
 			std::cout << "last Training operation time (ms): " << trainingTickMeter.getTimeMilli() << std::endl;
-			std::cout << "새로운 AutoTraining Deley (ms) 입력(현재 Delay : " << ((autoTrainingDelay <= 0) ? 10 * useData_Num : autoTrainingDelay) << ")" << std::endl;
+			std::cout << "새로운 AutoTraining Deley (ms) 입력(현재 Delay : " << ((autoTrainingDelay <= 0) ? trainingTickMeter.getTimeMilli() + 200 : autoTrainingDelay) << ")" << std::endl;
 			std::cin >> temp;
 			autoTrainingDelay = temp;
 			std::cout << "Delay 가" << autoTrainingDelay << "으로 설정되었습니다." << std::endl;
 			break;
 		}case 2:
 		{
+			break;
+		}case 3:
+		{
+			std::cout << "Enter : 손글씨 예측 종료 | Mouse LeftButton : Draw | Mouse RightButton : Erase" << std::endl;
+			cv::Mat paintScreen;
+			paintScreen.zeros(trainingMats[0].size(), CV_64FC1);
+
+			op->PaintWindow(paintScreen, paintScreen, "Paint", paintScreen.size() * 20, 13, this);
+
 			break;
 		}
 		}

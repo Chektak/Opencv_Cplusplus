@@ -13,11 +13,18 @@
 //CV_16F	double16_t (-32768~32767)
 
 //Opencv 테스트 클래스
+
 class OpencvPractice
 {
 private:
 	int fps;
 	int delay;
+
+
+public:
+	static cv::Point mousePt;
+	static bool mouseLeftPress;
+	static bool mouseRightPress;
 public:
 	OpencvPractice() : fps(60), delay(cvRound(1000/fps)) {};
 
@@ -40,5 +47,8 @@ public:
 	int ConvertCVGrayImageType(int mNistMagicNumber);
 
 	int ReverseInt(int);
+
+	void PaintWindow(cv::InputArray paintMat, cv::OutputArray _Output, cv::String windowName, cv::Size windowSize, int exitAsciiCode, CNNMachine* cnnM);
+	static void CallBackFunc(int event, int x, int y, int flags, void* userdata);
 
 };
