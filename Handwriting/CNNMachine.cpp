@@ -92,12 +92,11 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(2));
 		}
-		
-		
 	}
 	kernel1Stride = cv::Size(1, 1);
 	kernel2Stride = cv::Size(1, 1);
 	
+
 	//합성곱은 세임 패딩으로 진행하므로 풀링층 2개에서의 축소만 계산
 	int wHeight = (trainingMats[0].rows - poolSize.height) / poolStride.height + 1;
 		wHeight = (wHeight - poolSize.height) / poolStride.height + 1;
@@ -114,32 +113,33 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 #pragma region 합성곱 결과, 합성곱 결과 제로 패딩, 풀링 결과, 풀링 결과 제로 패딩, 풀링 역방향 계산 필터 행렬 초기화
 
 	for (int i = 0; i < trainingMats.size(); i++) {
-		conv1Mats.push_back(std::vector<cv::Mat>());
-		conv2Mats.push_back(std::vector<cv::Mat>());
-		conv1Bias.push_back(std::vector<double>());
-		conv2Bias.push_back(std::vector<double>());
-		conv1ZeroPaddingMats.push_back(std::vector<cv::Mat>());
-		conv2ZeroPaddingMats.push_back(std::vector<cv::Mat>());
-		pool1result.push_back(std::vector<cv::Mat>());
-		pool2result.push_back(std::vector<cv::Mat>());
-		pool1resultZeroPadding.push_back(std::vector<cv::Mat>());
-
+		conv1ResultMats.push_back(std::vector<cv::Mat>());
+		conv2ResultMats.push_back(std::vector<cv::Mat>());
+		conv1ResultBiases.push_back(std::vector<double>());
+		conv2ResultBiases.push_back(std::vector<double>());
+		conv1ResultZeroPadMats.push_back(std::vector<cv::Mat>());
+		conv2ResultZeroPadMats.push_back(std::vector<cv::Mat>());
+		pool1Result.push_back(std::vector<cv::Mat>());
+		pool2Result.push_back(std::vector<cv::Mat>());
+		pool1ResultZeroPadding.push_back(std::vector<cv::Mat>());
 		pool1BackpropFilters.push_back(std::vector<cv::Mat>());
 		pool2BackpropFilters.push_back(std::vector<cv::Mat>());
+		biases1.push_back(0);
+		biases2.push_back(0);
 		for (int j = 0; j < kernel1_Num; j++) {
-			conv1Mats[i].push_back(cv::Mat_<double>());
-			conv1Bias[i].push_back(0);
-			conv1ZeroPaddingMats[i].push_back(cv::Mat_<double>());
-			pool1result[i].push_back(cv::Mat_<double>());
-			pool1resultZeroPadding[i].push_back(cv::Mat_<double>());
+			conv1ResultMats[i].push_back(cv::Mat_<double>());
+			conv1ResultBiases[i].push_back(0);
+			conv1ResultZeroPadMats[i].push_back(cv::Mat_<double>());
+			pool1Result[i].push_back(cv::Mat_<double>());
+			pool1ResultZeroPadding[i].push_back(cv::Mat_<double>());
 		
 			pool1BackpropFilters[i].push_back(cv::Mat_<double>());
 		}
 		for (int j = 0; j < kernel2_Num; j++) {
-			conv2Mats[i].push_back(cv::Mat_<double>());
-			conv2Bias[i].push_back(0);
-			conv2ZeroPaddingMats[i].push_back(cv::Mat_<double>());
-			pool2result[i].push_back(cv::Mat_<double>());
+			conv2ResultMats[i].push_back(cv::Mat_<double>());
+			conv2ResultBiases[i].push_back(0);
+			conv2ResultZeroPadMats[i].push_back(cv::Mat_<double>());
+			pool2Result[i].push_back(cv::Mat_<double>());
 			
 			pool2BackpropFilters[i].push_back(cv::Mat_<double>());
 		}
@@ -205,33 +205,33 @@ void CNNMachine::ForwardPropagation()
 
 		Math::CreateZeroPadding(trainingMats[x1i], x1ZeroPaddingMats[x1i], trainingMats[0].size(), kernels1[0][0].size(), kernel1Stride);
 		//합성곱층 1
-		for (int k1i = 0; k1i < kernel1_Num; k1i++) {
-			Math::Convolution(x1ZeroPaddingMats[x1i], conv1Mats[x1i][k1i], trainingMats[0].size(), kernels1[0][k1i], kernel1Stride);
-			conv1Mats[x1i][k1i] += conv1Bias[x1i][k1i];
-			Math::Relu(conv1Mats[x1i][k1i], conv1Mats[x1i][k1i]);
-			Math::CreateZeroPadding(conv1Mats[x1i][k1i], conv1ZeroPaddingMats[x1i][k1i], pool1ResultSize, poolSize, poolStride);
-			Math::MaxPooling(conv1ZeroPaddingMats[x1i][k1i], pool1result[x1i][k1i], poolSize, poolStride);
+		for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+			Math::Convolution(x1ZeroPaddingMats[x1i], conv1ResultMats[x1i][k1n], trainingMats[0].size(), kernels1[0][k1n], kernel1Stride);
+			conv1ResultMats[x1i][k1n] += conv1ResultBiases[x1i][k1n];
+			Math::Relu(conv1ResultMats[x1i][k1n], conv1ResultMats[x1i][k1n]);
+			Math::CreateZeroPadding(conv1ResultMats[x1i][k1n], conv1ResultZeroPadMats[x1i][k1n], pool1ResultSize, poolSize, poolStride);
+			Math::MaxPooling(conv1ResultZeroPadMats[x1i][k1n], pool1Result[x1i][k1n], poolSize, poolStride);
 
-			Math::CreateZeroPadding(pool1result[x1i][k1i], pool1resultZeroPadding[x1i][k1i], pool1result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
+			Math::CreateZeroPadding(pool1Result[x1i][k1n], pool1ResultZeroPadding[x1i][k1n], pool1Result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
 		}
 		//합성곱층 2
-		/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1result행렬과
+		/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1Result행렬과
 		합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
-		for (int k2i = 0; k2i < kernel2_Num; k2i++) {
-			for (int k1i = 0; k1i < kernel1_Num; k1i++) {
-				Math::Convolution(pool1resultZeroPadding[x1i][k1i], conv2Mats[x1i][k2i], pool1result[0][0].size(), kernels2[k1i][k2i], kernel2Stride);
+		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+			for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+				Math::Convolution(pool1ResultZeroPadding[x1i][k1n], conv2ResultMats[x1i][k2n], pool1Result[0][0].size(), kernels2[k1n][k2n], kernel2Stride);
 			}
-			conv2Mats[x1i][k2i] += conv2Bias[x1i][k2i];
-			Math::Relu(conv2Mats[x1i][k2i], conv2Mats[x1i][k2i]);
-			Math::CreateZeroPadding(conv2Mats[x1i][k2i], conv2ZeroPaddingMats[x1i][k2i], pool2ResultSize, poolSize, poolStride);
-			Math::MaxPooling(conv2ZeroPaddingMats[x1i][k2i], pool2result[x1i][k2i], poolSize, poolStride);
+			conv2ResultMats[x1i][k2n] += conv2ResultBiases[x1i][k2n];
+			Math::Relu(conv2ResultMats[x1i][k2n], conv2ResultMats[x1i][k2n]);
+			Math::CreateZeroPadding(conv2ResultMats[x1i][k2n], conv2ResultZeroPadMats[x1i][k2n], pool2ResultSize, poolSize, poolStride);
+			Math::MaxPooling(conv2ResultZeroPadMats[x1i][k2n], pool2Result[x1i][k2n], poolSize, poolStride);
 		}
 		//완전연결신경망 입력
-		//4차원 pool2result를 2차원 행렬 xMat으로 변환
+		//4차원 pool2Result를 2차원 행렬 xMat으로 변환
 		//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
 		//vec<vec<double>> to Mat 변환 : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
-		for (int k2i = 0; k2i < kernel2_Num; k2i++) {
-			tempMat = pool2result[x1i][k2i];
+		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+			tempMat = pool2Result[x1i][k2n];
 			for (int i = 0; i < tempMat.rows; ++i) {
 				tempArr[x1i].insert(tempArr[x1i].end(), tempMat.ptr<double>(i), tempMat.ptr<double>(i) + tempMat.cols * tempMat.channels());
 			}
@@ -243,17 +243,21 @@ void CNNMachine::ForwardPropagation()
 	//훈련 데이터 수만큼 반복
 	for (int i = 0; i < tempArr.size(); ++i)
 	{
-		// Make a temporary cv::Mat row and add to NewSamples _without_ data copy
+		//Make a temporary cv::Mat row and add to NewSamples _without_ data copy
 		cv::Mat Sample(1, tempArr[0].size(), CV_64FC1, tempArr[i].data());
 		xMat.push_back(Sample);
 	}
 	Math::NeuralNetwork(xMat, a1Mat, w1Mat);
-	a1Mat += bias1;
+	for (int a1i = 0; a1i < a1Mat.rows; a1i++) {
+		a1Mat.row(a1i) += biases1[a1i];
+	}
+
 	Math::Relu(a1Mat, a1Mat);
 
 	Math::NeuralNetwork(a1Mat, yHatMat, w2Mat);
-
-	yHatMat += bias2;
+	for (int yHati = 0; yHati < yHatMat.rows; yHati++) {
+		yHatMat.row(yHati) += biases2[yHati];
+	}
 	Math::SoftMax(yHatMat, yHatMat);
 }
 
@@ -277,19 +281,19 @@ void CNNMachine::BackPropagation(double learningRate)
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 			//Pooling 함수 역방향 계산으로 풀링 필터 할당
-			Math::GetMaxPoolingFilter(conv2ZeroPaddingMats[x1i][k2n], pool2BackpropFilters[x1i][k2n], pool2result[x1i][k2n], poolSize, poolStride);
+			Math::GetMaxPoolingFilter(conv2ResultZeroPadMats[x1i][k2n], pool2BackpropFilters[x1i][k2n], pool2Result[x1i][k2n], poolSize, poolStride);
 			//풀링 필터로 업샘플링
-			cv::Mat sample = yLossW2Relu3W1.row(x1i).reshape(1, pool2result[0].size()).row(k2n).reshape(1, pool2result[0][0].rows);
+			cv::Mat sample = yLossW2Relu3W1.row(x1i).reshape(1, pool2Result[0].size()).row(k2n).reshape(1, pool2Result[0][0].rows);
 			Math::MaxPoolingBackprop(sample, yLossW2Relu3W1UpRelu2[x1i][k2n], pool2BackpropFilters[x1i][k2n], poolSize, poolStride);
 
 			//Relu 함수 역방향 계산
 			//Up-Sampleling 결과 행렬과 Relu(Conv2)행렬을 벡터곱
-			yLossW2Relu3W1UpRelu2[x1i][k2n] = yLossW2Relu3W1UpRelu2[x1i][k2n].mul(conv2Mats[x1i][k2n]);
+			yLossW2Relu3W1UpRelu2[x1i][k2n] = yLossW2Relu3W1UpRelu2[x1i][k2n].mul(conv2ResultMats[x1i][k2n]);
 		}
 	}
 	
 	//커널2 역방향 계산을 위한 합성곱2 필터 계산
-	Math::GetConvBackpropFilters(pool1result[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
+	Math::GetConvBackpropFilters(pool1Result[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
 	//커널1 역방향 계산을 위한 합성곱1 필터 계산
 	Math::GetConvBackpropFilters(trainingMats[0], &conv1BackpropFilters, kernels1[0][0], kernel1Stride);
 
@@ -311,14 +315,14 @@ void CNNMachine::BackPropagation(double learningRate)
 			yLossW2Relu3W1UpRelu2P1 /= kernels2[0].size();
 
 			//Pooling 함수 역방향 계산으로 풀링 필터 정의
-			Math::GetMaxPoolingFilter(conv1ZeroPaddingMats[x1i][k1n], pool1BackpropFilters[x1i][k1n], pool1result[x1i][k1n], poolSize, poolStride);
+			Math::GetMaxPoolingFilter(conv1ResultZeroPadMats[x1i][k1n], pool1BackpropFilters[x1i][k1n], pool1Result[x1i][k1n], poolSize, poolStride);
 			//풀링 필터로 업샘플링
 			Math::MaxPoolingBackprop(yLossW2Relu3W1UpRelu2P1, yLossW2Relu3W1UpRelu2P1UpRelu[x1i][k1n], pool1BackpropFilters[x1i][k1n], poolSize, poolStride);
 
 			//Relu 함수 역방향 계산
 			//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
-			//Math::Relu(conv1Mats[x1i][k1n], conv1Mats[x1i][k1n]);
-			yLossW2Relu3W1UpRelu2P1UpRelu[x1i][k1n] = yLossW2Relu3W1UpRelu2P1UpRelu[x1i][k1n].mul(conv1Mats[x1i][k1n]);
+			//Math::Relu(conv1ResultMats[x1i][k1n], conv1ResultMats[x1i][k1n]);
+			yLossW2Relu3W1UpRelu2P1UpRelu[x1i][k1n] = yLossW2Relu3W1UpRelu2P1UpRelu[x1i][k1n].mul(conv1ResultMats[x1i][k1n]);
 		}
 	}
 #pragma region 합성곱층1 가중치 행렬(커널1), 편향 역방향 계산
@@ -330,15 +334,22 @@ void CNNMachine::BackPropagation(double learningRate)
 				newKernel.copyTo(kernels1[k1c][k1n]);
 			}
 			double conv1BiasBackprop = 0;
-			for (int bY = 0; bY < conv1Mats[0][0].rows; bY++) {
-				for (int bX = 0; bX < conv1Mats[0][0].cols; bX++) {
+			for (int bY = 0; bY < conv1ResultMats[0][0].rows; bY++) {
+				for (int bX = 0; bX < conv1ResultMats[0][0].cols; bX++) {
 					conv1BiasBackprop += yLossW2Relu3W1UpRelu2P1UpRelu[x1i][k1n].at<double>(bY, bX);
 				}
 			}
-			conv1Bias[x1i][k1n] -= learningRate * conv1BiasBackprop / conv1Mats[0][0].rows * conv1Mats[0][0].cols;
+			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 평균으로 편향을 업데이트
+			conv1ResultBiases[x1i][k1n] -= learningRate * conv1BiasBackprop / conv1ResultMats[0][0].rows * conv1ResultMats[0][0].cols;
 		}
 	}
-	
+	//평균 계산
+	for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
+			kernels1[k1c][k1n] /= trainingMats.size();
+		}
+	}
+
 #pragma endregion
 
 #pragma region 합성곱층2 가중치 행렬(커널2) 역방향 계산
@@ -346,39 +357,46 @@ void CNNMachine::BackPropagation(double learningRate)
 		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
 			for (int k2c = 0; k2c < kernels2.size(); k2c++) {
 				cv::Mat newKernel;
-				Math::ConvKBackprop(-yLossW2Relu3W1UpRelu2[x1i][k2n], pool1resultZeroPadding[x1i][k2c], kernels2[k2c][k2n], newKernel, conv2BackpropFilters, kernel2Stride, learningRate);
+				Math::ConvKBackprop(-yLossW2Relu3W1UpRelu2[x1i][k2n], pool1ResultZeroPadding[x1i][k2c], kernels2[k2c][k2n], newKernel, conv2BackpropFilters, kernel2Stride, learningRate);
 				newKernel.copyTo(kernels2[k2c][k2n]);
 			}
 			double conv2BiasBackprop = 0;
-			for (int bY = 0; bY < conv2Mats[0][0].rows; bY++) {
-				for (int bX = 0; bX < conv2Mats[0][0].cols; bX++) {
+			for (int bY = 0; bY < conv2ResultMats[0][0].rows; bY++) {
+				for (int bX = 0; bX < conv2ResultMats[0][0].cols; bX++) {
 					conv2BiasBackprop += yLossW2Relu3W1UpRelu2[x1i][k2n].at<double>(bY, bX);
 				}
 			}
-			conv2Bias[x1i][k2n] -= learningRate * conv2BiasBackprop / conv2Mats[0][0].rows * conv2Mats[0][0].cols;
+			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 평균으로 편향을 업데이트
+			conv2ResultBiases[x1i][k2n] -= learningRate * conv2BiasBackprop / conv2ResultMats[0][0].rows * conv2ResultMats[0][0].cols;
+		}
+	}
+	//평균 계산
+	for (int k2n = 0; k2n < kernels1[0].size(); k2n++) {
+		for (int k2c = 0; k2c < kernels1.size(); k2c++) {
+			kernels1[k2c][k2n] /= trainingMats.size();
 		}
 	}
 
 #pragma endregion
 
-#pragma region 완전연결신경망층 가중치 행렬 역방향 계산
+#pragma region 완전연결신경망층 가중치 행렬, 편향 역방향 계산
 	w1Mat -= learningRate * xMat.t() * (yLossW2Relu3);// / yLossW2Relu3.rows;//평균을 계산해 간단한 특성 스케일 표준화
-	double bias1Backprop = 0;
 	for (int y = 0; y < yLossW2Relu3.rows; y++) {
+		double bias1Backprop = 0;
 		for (int x = 0; x < yLossW2Relu3.cols; x++) {
 			bias1Backprop += yLossW2Relu3.at<double>(y, x);
 		}
+		biases1[y] -= learningRate * bias1Backprop;// / yLossW2Relu3.cols;
 	}
-	bias1 -= learningRate * bias1Backprop;// / yLossW2Relu3.rows * yLossW2Relu3.cols;
 	
 	w2Mat -= learningRate * (a1Mat.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 표준화
-	double bias2Backprop = 0;
 	for (int y = 0; y < yLoss.rows; y++) {
+		double bias2Backprop = 0;
 		for (int x = 0; x < yLoss.cols; x++) {
 			bias2Backprop += yLoss.at<double>(y, x);
 		}
+		biases2[y] -= learningRate * bias2Backprop; // / yLoss.rows * yLoss.cols;
 	}
-	bias2 -= learningRate * bias2Backprop / yLoss.rows * yLoss.cols;
 #pragma endregion
 }
 
@@ -396,33 +414,43 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 	Math::CreateZeroPadding(input, inputZeroPad, input.size(), kernels1[0][0].size(), kernel1Stride);
 
 	//합성곱층 1
-	for (int k1i = 0; k1i < kernel1_Num; k1i++) {
-		Math::Convolution(inputZeroPad, predictConv1Mats[k1i], trainingMats[0].size(), kernels1[0][k1i], kernel1Stride);
-		predictConv1Mats[k1i] += conv1Bias[x1i][k1i];
-		Math::Relu(predictConv1Mats[k1i], predictConv1Mats[k1i]);
-		Math::CreateZeroPadding(predictConv1Mats[k1i], predictConv1ZeroPaddingMats[k1i], pool1ResultSize, poolSize, poolStride);
-		Math::MaxPooling(predictConv1ZeroPaddingMats[k1i], predictPool1result[k1i], poolSize, poolStride);
+	for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+		Math::Convolution(inputZeroPad, predictConv1Mats[k1n], trainingMats[0].size(), kernels1[0][k1n], kernel1Stride);
+		double conv1ResultBiasesTemp = 0;
+		for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+			conv1ResultBiasesTemp += conv1ResultBiases[x1i][k1n];
+		}
+		//편향의 평균을 더함
+		predictConv1Mats[k1n] += conv1ResultBiasesTemp / trainingMats.size();
+		Math::Relu(predictConv1Mats[k1n], predictConv1Mats[k1n]);
+		Math::CreateZeroPadding(predictConv1Mats[k1n], predictConv1ZeroPaddingMats[k1n], pool1ResultSize, poolSize, poolStride);
+		Math::MaxPooling(predictConv1ZeroPaddingMats[k1n], predictPool1Result[k1n], poolSize, poolStride);
 
-		Math::CreateZeroPadding(predictPool1result[k1i], predictPool1resultZeroPadding[x1i][k1i], pool1result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
+		Math::CreateZeroPadding(predictPool1Result[k1n], predictPool1ResultZeroPadding[k1n], pool1Result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
 	}
 	//합성곱층 2
-	/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1result행렬과
+	/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1Result행렬과
 	합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
-	for (int k2i = 0; k2i < kernel2_Num; k2i++) {
-		for (int k1i = 0; k1i < kernel1_Num; k1i++) {
-			Math::Convolution(predictPool1resultZeroPadding[k1i], predictConv2Mats[k2i], pool1result[0][0].size(), kernels2[k1i][k2i], kernel2Stride);
+	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+		for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+			Math::Convolution(predictPool1ResultZeroPadding[k1n], predictConv2Mats[k2n], pool1Result[0][0].size(), kernels2[k1n][k2n], kernel2Stride);
 		}
-		predictConv2Mats[k2i] += conv2Bias[x1i][k2i];
-		Math::Relu(predictConv2Mats[k2i], predictConv2Mats[k2i]);
-		Math::CreateZeroPadding(predictConv2Mats[k2i], predictConv2ZeroPaddingMats[k2i], pool2ResultSize, poolSize, poolStride);
-		Math::MaxPooling(predictConv2ZeroPaddingMats[k2i], predictPool2result[k2i], poolSize, poolStride);
+		double conv2ResultBiasesTemp = 0;
+		for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+			conv2ResultBiasesTemp += conv2ResultBiases[x1i][k2n];
+		}
+		//편향의 평균을 더함
+		predictConv2Mats[k2n] += conv2ResultBiasesTemp / trainingMats.size();
+		Math::Relu(predictConv2Mats[k2n], predictConv2Mats[k2n]);
+		Math::CreateZeroPadding(predictConv2Mats[k2n], predictConv2ZeroPaddingMats[k2n], pool2ResultSize, poolSize, poolStride);
+		Math::MaxPooling(predictConv2ZeroPaddingMats[k2n], predictPool2Result[k2n], poolSize, poolStride);
 	}
 	//완전연결신경망 입력
-	//4차원 pool2result를 2차원 행렬 xMat으로 변환
+	//4차원 pool2Result를 2차원 행렬 xMat으로 변환
 	//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
 	//vec<vec<double>> to Mat 변환 : https://stackoverflow.com/questions/18519647/opencv-convert-vector-of-vector-to-mat
-	for (int k2i = 0; k2i < kernel2_Num; k2i++) {
-		tempMat = predictPool2result[k2i];
+	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+		tempMat = predictPool2Result[k2n];
 		for (int i = 0; i < tempMat.rows; ++i) {
 			tempArr.insert(tempArr.end(), tempMat.ptr<double>(i), tempMat.ptr<double>(i) + tempMat.cols * tempMat.channels());
 		}
@@ -435,13 +463,28 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 	predictXMat.push_back(Sample);
 
 	Math::NeuralNetwork(predictXMat, predictA1Mat, w1Mat);
-	predictA1Mat += bias1;
+	double biases1Temp = 0;
+	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+		biases1Temp += biases1[x1i];
+	}
+	//편향의 평균을 더함
 	Math::Relu(predictA1Mat, predictA1Mat);
 
 	Math::NeuralNetwork(predictA1Mat, predictYHatMat, w2Mat);
 
-	predictYHatMat += bias2;
+	predictA1Mat += biases1Temp / trainingMats.size();
+	double biases2Temp = 0;
+	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+		biases2Temp += biases2[x1i];
+	}
+	//편향의 평균을 더함
+	predictYHatMat += biases2Temp / trainingMats.size();
 	Math::SoftMax(predictYHatMat, predictYHatMat);
+
+	std::cout << "손글씨 숫자 예측 완료" << std::endl;
+	for (int x = 0; x < predictYHatMat.cols; x++) {
+		std::cout << x+1 <<"일 확률 : " << predictYHatMat.at<double>(0, x) * 100 << "%"<< std::endl;
+	}
 }
 
 bool CNNMachine::SaveModel(cv::String fileName)
@@ -469,12 +512,12 @@ bool CNNMachine::SaveModel(cv::String fileName)
 
 	fs << "Kernels1"			<< kernels1;
 	fs << "Kernels2"			<< kernels2;
-	fs << "Conv1Bias"			<< conv1Bias;
-	fs << "Conv2Bias"			<< conv2Bias;
+	fs << "Conv1Bias"			<< conv1ResultBiases;
+	fs << "Conv2Bias"			<< conv2ResultBiases;
 	fs << "w1Mat"				<< w1Mat;
 	fs << "w2Mat"				<< w2Mat;
-	fs << "Bias1"				<< bias1;
-	fs << "Bias2"				<< bias2;
+	fs << "Bias1"				<< biases1;
+	fs << "Bias2"				<< biases2;
 
 	std::cout << "Model Save Completed!!!" << std::endl;
 	fs.release();
@@ -510,12 +553,12 @@ bool CNNMachine::LoadModel(cv::String fileName)
 	fs["lossAverages"]		>> lossAverages;
 	fs["Kernels1"]			>> kernels1;
 	fs["Kernels2"]			>> kernels2;
-	fs["Conv1Bias"]			>> conv1Bias;
-	fs["Conv2Bias"]			>> conv2Bias;
+	fs["Conv1Bias"]			>> conv1ResultBiases;
+	fs["Conv2Bias"]			>> conv2ResultBiases;
 	fs["w1Mat"]				>> w1Mat;
 	fs["w2Mat"]				>> w2Mat;
-	fs["Bias1"]				>> bias1;
-	fs["Bias2"]				>> bias2;
+	fs["Bias1"]				>> biases1;
+	fs["Bias2"]				>> biases2;
 	std::cout << kernels1.size() << std::endl;
 
 	std::cout << "Model Load Completed!!!" << std::endl;
@@ -531,15 +574,15 @@ void CNNMachine::ReleaseVectors()
 	x1ZeroPaddingMats.clear(); 
 	kernels1.clear();
 	kernels2.clear(); 
-	conv1Mats.clear();
-	conv2Mats.clear();
-	conv1Bias.clear();
-	conv2Bias.clear();
-	conv1ZeroPaddingMats.clear();
-	conv2ZeroPaddingMats.clear();
-	pool1result.clear();
-	pool2result.clear();
-	pool1resultZeroPadding.clear();
+	conv1ResultMats.clear();
+	conv2ResultMats.clear();
+	conv1ResultBiases.clear();
+	conv2ResultBiases.clear();
+	conv1ResultZeroPadMats.clear();
+	conv2ResultZeroPadMats.clear();
+	pool1Result.clear();
+	pool2Result.clear();
+	pool1ResultZeroPadding.clear();
 	pool1BackpropFilters.clear();
 	pool2BackpropFilters.clear(); 
 	conv2BackpropFilters.clear();
@@ -570,15 +613,15 @@ bool CNNMachine::KeyEvent(int key)
 		std::cout << kernels1[0][0] << std::endl;
 		std::cout << "kernels2[0][0] : " << std::endl;
 		std::cout << kernels2[0][0] << std::endl;
-		std::cout << "conv1Bias[0][0]" << std::endl;
-		std::cout << conv1Bias[0][0] << std::endl;
-		std::cout << "conv1Bias[0][1]" << std::endl;
-		std::cout << conv1Bias[0][1] << std::endl;
+		std::cout << "conv1ResultBiases[0][0]" << std::endl;
+		std::cout << conv1ResultBiases[0][0] << std::endl;
+		std::cout << "conv1ResultBiases[0][1]" << std::endl;
+		std::cout << conv1ResultBiases[0][1] << std::endl;
 
-		std::cout << "conv2Bias[0][0]" << std::endl;
-		std::cout << conv2Bias[0][0] << std::endl;
-		std::cout << "conv2Bias[0][1]" << std::endl;
-		std::cout << conv2Bias[0][1] << std::endl;
+		std::cout << "conv2ResultBiases[0][0]" << std::endl;
+		std::cout << conv2ResultBiases[0][0] << std::endl;
+		std::cout << "conv2ResultBiases[0][1]" << std::endl;
+		std::cout << conv2ResultBiases[0][1] << std::endl;
 		std::cout << "w1Mat[0][0]" << std::endl;
 		std::cout << w1Mat.at<double>(0, 0) << std::endl;
 		std::cout << "w2Mat[0][0]" << std::endl;

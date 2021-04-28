@@ -284,7 +284,8 @@ void OpencvPractice::PaintWindow(cv::InputArray paintMat, cv::OutputArray _Outpu
 	cv::resizeWindow(windowName, windowSize);
 	while (cv::waitKeyEx() != exitAsciiCode) {
 		cv::imshow(windowName, output);
-		cnnM->ModelPredict(output);
+		if(cnnM != NULL)
+			cnnM->ModelPredict(output);
 	}
 }
 
