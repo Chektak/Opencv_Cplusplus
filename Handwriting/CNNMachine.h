@@ -86,7 +86,13 @@ public:
 	int autoTrainingDelay = 0;
 	bool autoTraining = false;
 	cv::TickMeter trainingTickMeter;
+	cv::TickMeter predictTickMeter;
+
 	OpencvPractice* op;
+
+	static cv::Point mousePt;
+	static bool mouseLeftPress;
+	static bool mouseRightPress;
 
 #pragma region 학습된 모델로 예측할 때 사용
 	std::vector<cv::Mat> predictConv1Mats;//합성곱층 1 결과
@@ -116,6 +122,10 @@ public:
 	bool SaveModel(cv::String fileName);
 	bool LoadModel(cv::String fileName);
 	void ReleaseVectors();
+
 	//훈련을 진행할경우 true, 진행하지 않을 경우 false 리턴
 	bool KeyEvent(int key);
+
+	void PaintWindow(cv::InputOutputArray paintMat, cv::String windowName, cv::Size windowSize, int exitAsciiCode);
+	static void CallBackFunc(int event, int x, int y, int flags, void* userdata);
 };

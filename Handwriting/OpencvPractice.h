@@ -48,7 +48,7 @@ public:
 
 	int ReverseInt(int);
 
-	void PaintWindow(cv::InputArray paintMat, cv::OutputArray _Output, cv::String windowName, cv::Size windowSize, int exitAsciiCode, CNNMachine* cnnM);
+	void PaintWindow(cv::InputOutputArray paintMat, cv::String windowName, cv::Size windowSize, int exitAsciiCode);
 	static void CallBackFunc(int event, int x, int y, int flags, void* userdata);
 
 };

@@ -270,22 +270,19 @@ int OpencvPractice::ReverseInt(int i)
 	return((int)ch1 << 24) + ((int)ch2 << 16) + ((int)ch3 << 8) + ch4;
 }
 
-void OpencvPractice::PaintWindow(cv::InputArray paintMat, cv::OutputArray _Output, cv::String windowName, cv::Size windowSize, int exitAsciiCode, CNNMachine *cnnM)
+void OpencvPractice::PaintWindow(cv::InputOutputArray paintMat, cv::String windowName, cv::Size windowSize, int exitAsciiCode)
 {
 	cv::Mat inputScreen = paintMat.getMat();
 	if(inputScreen.empty())
 		inputScreen = cv::Mat::zeros(cv::Size(28, 28), CV_64FC1);
-	cv::Mat output;
-	inputScreen.copyTo(inputScreen);
+	inputScreen.setTo(0);
 
 	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
-	cv::setMouseCallback(windowName, CallBackFunc, &output);
-
+	cv::imshow(windowName, inputScreen);
+	cv::setMouseCallback(windowName, CallBackFunc, &inputScreen);
 	cv::resizeWindow(windowName, windowSize);
-	while (cv::waitKeyEx() != exitAsciiCode) {
-		cv::imshow(windowName, output);
-		//if(cnnM != NULL)
-			cnnM->ModelPredict(output);
+	while (cv::waitKeyEx(1) != exitAsciiCode) {
+		cv::imshow(windowName, inputScreen);
 	}
 }
 
@@ -317,7 +314,7 @@ void OpencvPractice::CallBackFunc(int event, int x, int y, int flags, void* user
 		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
 		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(0), cv::FILLED, cv::LineTypes::LINE_4);
 	};
-
+	
 	switch (event)
 	{
 	case cv::EVENT_MOUSEMOVE:

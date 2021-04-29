@@ -72,8 +72,6 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 		trainingMats[i] /= 255;
 	}
 
-	
-
 	poolStride = cv::Size(2, 2);
 	poolSize = cv::Size(2, 2);
 
@@ -192,6 +190,21 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 
 	yHatMat.create(cv::Size(classification_Num, trainingMats.size()), CV_64FC1);
 #pragma endregion
+
+#pragma region 모델 예측 사용 변수 초기화
+	for (int j = 0; j < kernel1_Num; j++) {
+		predictConv1Mats.push_back(cv::Mat_<double>());
+		predictConv1ZeroPaddingMats.push_back(cv::Mat_<double>());
+		predictPool1Result.push_back(cv::Mat_<double>());
+		predictPool1ResultZeroPadding.push_back(cv::Mat_<double>());
+	}
+	for (int j = 0; j < kernel2_Num; j++) {
+		predictConv2Mats.push_back(cv::Mat_<double>());
+		predictConv2ZeroPaddingMats.push_back(cv::Mat_<double>());
+		predictPool2Result.push_back(cv::Mat_<double>());
+	}
+#pragma endregion
+	ModelPredict(cv::Mat::zeros(cv::Size(28,28), CV_64FC1));
 }
 
 void CNNMachine::ForwardPropagation()
@@ -662,7 +675,7 @@ bool CNNMachine::KeyEvent(int key)
 			cv::Mat paintScreen;
 			paintScreen.zeros(trainingMats[0].size(), CV_64FC1);
 
-			op->PaintWindow(paintScreen, paintScreen, "Paint", paintScreen.size() * 20, 13, this);
+			PaintWindow(paintScreen, "Paint", paintScreen.size() * 20, 13);
 
 			break;
 		}
@@ -755,4 +768,91 @@ bool CNNMachine::KeyEvent(int key)
 	}
 	}
 	return true;
+}
+
+void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowName, cv::Size windowSize, int exitAsciiCode)
+{
+	cv::Mat inputScreen = paintMat.getMat();
+	if (inputScreen.empty())
+		inputScreen = cv::Mat::zeros(cv::Size(28, 28), CV_64FC1);
+	inputScreen.setTo(0);
+
+	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
+	cv::imshow(windowName, inputScreen);
+	cv::setMouseCallback(windowName, CallBackFunc, &inputScreen);
+	cv::resizeWindow(windowName, windowSize);
+
+	do {
+		predictTickMeter.reset();
+		predictTickMeter.start();
+		system("cls");
+		cv::imshow(windowName, inputScreen);
+
+		ModelPredict(inputScreen);
+		predictTickMeter.stop();
+	
+	} while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli()) != exitAsciiCode);
+}
+
+//static 변수 초기화 (http://egloos.zum.com/kaludin/v/2461942)
+cv::Point CNNMachine::mousePt(0, 0);
+bool CNNMachine::mouseLeftPress = false;
+bool CNNMachine::mouseRightPress = false;
+
+void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata)
+{
+	std::cout << "pos (" << x << "," << y << ") ";
+	mousePt.x = x;
+	mousePt.y = y;
+
+	//람다 익명함수 사용
+	auto drawCircle = [](int x, int y, void* userdata) {
+
+		cv::Mat& img = *((cv::Mat*)(userdata)); // 1st cast it back, then deref
+		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
+		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
+		//cv::circle(img, cv::Point(x, y), 2, cv::Scalar(0.8), cv::FILLED, cv::LineTypes::LINE_4);
+		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(1), cv::FILLED, cv::LineTypes::LINE_4);
+	};
+
+	auto eraserCircle = [](int x, int y, void* userdata) {
+
+		cv::Mat& img = *((cv::Mat*)(userdata)); // 1st cast it back, then deref
+		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
+		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
+		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(0), cv::FILLED, cv::LineTypes::LINE_4);
+	};
+
+	switch (event)
+	{
+	case cv::EVENT_MOUSEMOVE:
+	{
+		if (mouseLeftPress == true)
+		{
+			drawCircle(x, y, userdata);
+		}
+		if (mouseRightPress == true) {
+			eraserCircle(x, y, userdata);
+		}
+		break;
+	}
+	case cv::EVENT_LBUTTONDOWN:
+	{
+		mouseLeftPress = true;
+		drawCircle(x, y, userdata);
+		break;
+	}
+	case cv::EVENT_LBUTTONUP:
+	{
+		mouseLeftPress = false;
+		break;
+	}
+	case cv::EVENT_RBUTTONDOWN:
+		mouseRightPress = true;
+		eraserCircle(x, y, userdata);
+		break;
+	case cv::EVENT_RBUTTONUP:
+		mouseRightPress = false;
+		break;
+	}
 }

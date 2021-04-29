@@ -3,6 +3,7 @@ int main() {
 	OpencvPractice op;
 
 	std::cout << "Hello OpenCV" << CV_VERSION << std::endl;
+
 	//op.Camera_In();
 	//op.Video_In("Resources/Video/Anime.mp4", 0.25f);
 	//op.Camera_In_Video_Out("aaa.avi");
@@ -59,12 +60,10 @@ int main() {
 	op.MatPrint(trainingVec, labelVec);
 	CNNMachine cnn;
 	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
-
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;
 	std::cout.precision(15);
-	cnn.Training(-1, 0.00001, 1);
-	//cnn.Training(-1, 0.0001/USEDATA_NUM, 1);
+	cnn.Training(-1, 0.0001, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트
@@ -77,5 +76,9 @@ int main() {
 	}
 	Math::GetConvBackpropFilters(input, &vec, k, cv::Size(1, 1));*/
 
+	//간단한 그림판 예제
+	//Enter키는 아스키코드로 13
+	/*cv::Mat screen = cv::Mat::zeros(cv::Size(28, 28), CV_64FC1);
+	op.PaintWindow(screen, "Paint", screen.size()*20, 13);*/
 	return 0;
 }
