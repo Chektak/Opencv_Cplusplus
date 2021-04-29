@@ -204,7 +204,7 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 		predictPool2Result.push_back(cv::Mat_<double>());
 	}
 #pragma endregion
-	ModelPredict(cv::Mat::zeros(cv::Size(28,28), CV_64FC1));
+	//ModelPredict(cv::Mat::zeros(cv::Size(28,28), CV_64FC1));
 }
 
 void CNNMachine::ForwardPropagation()
@@ -225,14 +225,14 @@ void CNNMachine::ForwardPropagation()
 			Math::CreateZeroPadding(conv1ResultMats[x1i][k1n], conv1ResultZeroPadMats[x1i][k1n], pool1ResultSize, poolSize, poolStride);
 			Math::MaxPooling(conv1ResultZeroPadMats[x1i][k1n], pool1Result[x1i][k1n], poolSize, poolStride);
 
-			Math::CreateZeroPadding(pool1Result[x1i][k1n], pool1ResultZeroPadding[x1i][k1n], pool1Result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
+			Math::CreateZeroPadding(pool1Result[x1i][k1n], pool1ResultZeroPadding[x1i][k1n], pool1ResultSize, kernels2[0][0].size(), kernel2Stride);
 		}
 		//합성곱층 2
 		/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1Result행렬과
 		합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
 		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 			for (int k1n = 0; k1n < kernel1_Num; k1n++) {
-				Math::Convolution(pool1ResultZeroPadding[x1i][k1n], conv2ResultMats[x1i][k2n], pool1Result[0][0].size(), kernels2[k1n][k2n], kernel2Stride);
+				Math::Convolution(pool1ResultZeroPadding[x1i][k1n], conv2ResultMats[x1i][k2n], pool1ResultSize, kernels2[k1n][k2n], kernel2Stride);
 			}
 			conv2ResultMats[x1i][k2n] += conv2ResultBiases[x1i][k2n];
 			Math::Relu(conv2ResultMats[x1i][k2n], conv2ResultMats[x1i][k2n]);
@@ -432,8 +432,6 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 	cv::Mat input = _Input.getMat();
 	cv::Mat inputZeroPad;
 
-	tempArr.push_back(0);
-
 	Math::CreateZeroPadding(input, inputZeroPad, input.size(), kernels1[0][0].size(), kernel1Stride);
 
 	//합성곱층 1
@@ -449,14 +447,14 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 		Math::CreateZeroPadding(predictConv1Mats[k1n], predictConv1ZeroPaddingMats[k1n], pool1ResultSize, poolSize, poolStride);
 		Math::MaxPooling(predictConv1ZeroPaddingMats[k1n], predictPool1Result[k1n], poolSize, poolStride);
 
-		Math::CreateZeroPadding(predictPool1Result[k1n], predictPool1ResultZeroPadding[k1n], pool1Result[0][0].size(), kernels2[0][0].size(), kernel2Stride);
+		Math::CreateZeroPadding(predictPool1Result[k1n], predictPool1ResultZeroPadding[k1n], pool1ResultSize, kernels2[0][0].size(), kernel2Stride);
 	}
 	//합성곱층 2
 	/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1Result행렬과
 	합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
 	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 		for (int k1n = 0; k1n < kernel1_Num; k1n++) {
-			Math::Convolution(predictPool1ResultZeroPadding[k1n], predictConv2Mats[k2n], pool1Result[0][0].size(), kernels2[k1n][k2n], kernel2Stride);
+			Math::Convolution(predictPool1ResultZeroPadding[k1n], predictConv2Mats[k2n], pool1ResultSize, kernels2[k1n][k2n], kernel2Stride);
 		}
 		double conv2ResultBiasesTemp = 0;
 		for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
@@ -479,11 +477,14 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 		}
 	}
 
-	cv::Mat predictNeuralInputMat;
-	predictNeuralInputMat.create(cv::Size(0, tempArr.size()), CV_64FC1);
+	//cv::Mat predictNeuralInputMat;
+	//predictNeuralInputMat.create(cv::Size(0, tempArr.size()), CV_64FC1);
 
 	cv::Mat Sample(1, tempArr.size(), CV_64FC1, tempArr.data());
 	predictXMat.push_back(Sample);
+
+
+	//std::cout << predictXMat.size() << "w1Mat : " << w1Mat.size() << std::endl;
 
 	Math::NeuralNetwork(predictXMat, predictA1Mat, w1Mat);
 	double biases1Temp = 0;
@@ -801,7 +802,6 @@ bool CNNMachine::mouseRightPress = false;
 
 void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata)
 {
-	std::cout << "pos (" << x << "," << y << ") ";
 	mousePt.x = x;
 	mousePt.y = y;
 
