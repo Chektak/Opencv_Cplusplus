@@ -63,7 +63,8 @@ int main() {
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;
 	std::cout.precision(15);
-	cnn.Training(-1, 0.00001/USEDATA_NUM, 1);
+	cnn.Training(-1, 0.00001, 1);
+	//cnn.Training(-1, 0.0001/USEDATA_NUM, 1);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트
@@ -75,7 +76,6 @@ int main() {
 		vec.push_back(std::pair<int, int>());
 	}
 	Math::GetConvBackpropFilters(input, &vec, k, cv::Size(1, 1));*/
-
 
 	return 0;
 }

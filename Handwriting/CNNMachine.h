@@ -110,7 +110,7 @@ public:
 	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num);
 	//정방향 계산
 	void ForwardPropagation();
-	void BackPropagation(double learningRate);
+	void BackPropagation();
 	void ModelPredict(cv::InputArray _Input);
 
 	bool SaveModel(cv::String fileName);

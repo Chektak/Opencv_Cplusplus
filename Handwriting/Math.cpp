@@ -72,7 +72,7 @@ void Math::Convolution(cv::InputArray _Input, cv::OutputArray _Output, const cv:
 			}
 		}
 	}
-	//평균을 계산해 간단한 특성 스케일 표준화
+	//평균을 계산해 간단한 특성 스케일 정규화
 	output /= kernel.rows * kernel.cols;
 }
 
@@ -245,11 +245,11 @@ void Math::GetConvBackpropFilters(cv::InputArray _Input, std::vector<std::pair<i
 }
 
 
-void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, double learningRate)
+void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput, const cv::Size kernelMatSize, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
 {
 	cv::Mat zeroPaddingMat = _ConvZeroPadInput.getMat();
-	const int filterRows = _Kernel.size().height;
-	const int filterCols = _Kernel.size().width;
+	const int filterRows = kernelMatSize.height;
+	const int filterCols = kernelMatSize.width;
 	//합성곱 입력 행렬이 제로 패딩 행렬이 아닐 경우 제로패딩
 	if ((zeroPaddingMat.rows - filterRows) / stride.height + 1 != _Input.getMat().rows
 		|| (zeroPaddingMat.cols - filterCols) / stride.width + 1 != _Input.getMat().cols) {
@@ -258,12 +258,10 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 		std::cout << "ConvKBackprop 예기치 않은 입력 : 합성곱 입력을 자동으로 제로패딩했습니다. :\n"<<zeroPaddingMat << std::endl;
 	}
 	cv::Mat input = _Input.getMat();
-	cv::Mat kernel = _Kernel.getMat();
+	//cv::Mat kernel = _Kernel.getMat();
 	
 	//_Kernel.copyTo(_Output);
-	_Output.create(_Kernel.size(), CV_64FC1);
-	_Output.setTo(0);
-	cv::Mat kOutput = _Output.getMat();
+	cv::Mat kOutput = cv::Mat::zeros(kernelMatSize, CV_64FC1);
 
 	//std::cout << "커널 업데이트" << std::endl;
 	//소수점 4자리까지 출력
@@ -280,10 +278,10 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 
 			int fIndex = iY * _Input.size().width + iX;
 
-			int fYStart = (int)(_ConvFilter[fIndex].first / kernel.cols);
-			int fXStart = _ConvFilter[fIndex].first % kernel.cols;
-			int fYEnd = (int)(_ConvFilter[fIndex].second / kernel.cols);
-			int fXEnd = _ConvFilter[fIndex].second % kernel.cols;
+			int fYStart = (int)(_ConvFilter[fIndex].first / kernelMatSize.width);
+			int fXStart = _ConvFilter[fIndex].first % kernelMatSize.width;
+			int fYEnd = (int)(_ConvFilter[fIndex].second / kernelMatSize.width);
+			int fXEnd = _ConvFilter[fIndex].second % kernelMatSize.width;
 			for (int fY = fYStart; fY <= fYEnd; fY++) {
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
 					//Kernel 업데이트
@@ -291,23 +289,23 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 				}
 			}
 #pragma endregion
-			//평균을 계산해 간단한 특성 스케일 표준화
+			//평균을 계산해 간단한 특성 스케일 정규화
 			kTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			kOutput += kTemp;
 			//std::cout << std::endl;
 		}
 	}
-	kOutput *= learningRate;
 	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
-	kOutput += _Kernel.getMat();
+	//kOutput += _Kernel.getMat();
+	kOutput.copyTo(_Output);
 }
 
-void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride, double learningRate)
+void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
 {
 	cv::Mat input = _Input.getMat();
 	cv::Mat kernel = _Kernel.getMat();
 
-	//_Kernel.copyTo(_Output);
+	//input.copyTo(_Output);
 	_Output.create(input.size(), CV_64FC1);
 	_Output.setTo(0);
 	cv::Mat output = _Output.getMat();
@@ -332,18 +330,17 @@ void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::Outp
 			int fXEnd = _ConvFilter[fIndex].second % kernel.cols;
 			for (int fY = fYStart; fY <= fYEnd; fY++) {
 				for (int fX = fXStart; fX <= fXEnd; fX++) {
-					//std::cout << "K" << fY * kernel.cols + fX << "+=" << input.at<double>(iY, iX) * zeroPaddingMat.at<double>(iY + fY, iX + fX) << "|";
-					output.at<double>(iY, iX) += input.at<double>(iY, iX) * kernel.at<double>(fY, fX);
+					oTemp.at<double>(iY, iX) += kernel.at<double>(fY, fX); 
 				}
 			}
 #pragma endregion
-			//평균을 계산해 간단한 특성 스케일 표준화
+			//간단한 특성 스케일 정규화
 			oTemp /= (fYEnd - fYStart) * (fXEnd - fXStart);
 			output += oTemp;
 			//std::cout << std::endl;
 		}
 	}
-	output *= learningRate;
+	//output = input.mul(output);
 }
 
 void Math::NeuralNetwork(cv::InputArray _Input, cv::OutputArray _Output, cv::InputArray w)
