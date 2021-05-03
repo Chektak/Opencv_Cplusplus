@@ -36,8 +36,8 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 				loss += yMat.at<double>(y, x) * log((yHatMat.at<double>(y, x) == 0) ? 0.00000000001 : yHatMat.at<double>(y, x));
 			}
 		}
-		//loss /= -yMat.rows;
-		loss *= -1;
+		loss /= -yMat.rows;
+		//loss *= -1;
 		lossAverages.push_back(lossAverages[nowEpoch - 1] + loss / nowEpoch);
 		std::cout << "코스트 : " << loss << std::endl;
 		std::cout << "코스트 평균 : " << lossAverages[nowEpoch] << std::endl;
@@ -466,6 +466,7 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 		Math::CreateZeroPadding(predictConv2Mats[k2n], predictConv2ZeroPaddingMats[k2n], pool2ResultSize, poolSize, poolStride);
 		Math::MaxPooling(predictConv2ZeroPaddingMats[k2n], predictPool2Result[k2n], poolSize, poolStride);
 	}
+	
 	//완전연결신경망 입력
 	//4차원 pool2Result를 2차원 행렬 xMat으로 변환
 	//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
@@ -792,7 +793,7 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 		ModelPredict(inputScreen);
 		predictTickMeter.stop();
 	
-	} while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli()) != exitAsciiCode);
+	} while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
 }
 
 //static 변수 초기화 (http://egloos.zum.com/kaludin/v/2461942)
