@@ -12,7 +12,7 @@
 #include <random>
 //#include <time.h>
 
-#define USEDATA_NUM 200
+#define USEDATA_NUM 1
 #define KERNEL1_NUM 8
 #define KERNEL2_NUM 16
 //숫자 0~9를 분류하므로 클래스 분류 수는 10개

@@ -208,7 +208,6 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 		predictPool2Result.push_back(cv::Mat_<double>());
 	}
 #pragma endregion
-	//ModelPredict(cv::Mat::zeros(cv::Size(28,28), CV_64FC1));
 }
 
 void CNNMachine::ForwardPropagation()
@@ -287,7 +286,8 @@ void CNNMachine::ForwardPropagation()
 
 void CNNMachine::BackPropagation()
 {
-	yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+	//yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+	yLoss = yHatMat - yMat; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	w2T = w2Mat.t();
 	yLossW2 = yLoss*w2T; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
 	
@@ -441,7 +441,13 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 	std::vector<double> tempArr;
 	cv::Mat tempMat;
 
+	
 	cv::Mat input = _Input.getMat();
+	//std::cout << input << std::endl;
+	
+	//int i = rand() % useData_Num;
+	//cv::Mat input = trainingMats[i];
+	//cv::imshow("Debug", input);
 	cv::Mat inputZeroPad;
 
 	Math::CreateZeroPadding(input, inputZeroPad, input.size(), kernels1[0][0].size(), kernel1Stride);
@@ -449,28 +455,29 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 	//합성곱층 1
 	for (int k1n = 0; k1n < kernel1_Num; k1n++) {
 		Math::Convolution(inputZeroPad, predictConv1Mats[k1n], trainingMats[0].size(), kernels1[0][k1n], kernel1Stride);
-		//편향의 평균을 더함
 		predictConv1Mats[k1n] += conv1ResultBiases[0][k1n];
+
 		Math::Relu(predictConv1Mats[k1n], predictConv1Mats[k1n]);
 		Math::CreateZeroPadding(predictConv1Mats[k1n], predictConv1ZeroPaddingMats[k1n], pool1ResultSize, poolSize, poolStride);
 		Math::MaxPooling(predictConv1ZeroPaddingMats[k1n], predictPool1Result[k1n], poolSize, poolStride);
 
 		Math::CreateZeroPadding(predictPool1Result[k1n], predictPool1ResultZeroPadding[k1n], pool1ResultSize, kernels2[0][0].size(), kernel2Stride);
 	}
+
 	//합성곱층 2
 	/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 pool1Result행렬과
 	합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
 	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 		for (int k1n = 0; k1n < kernel1_Num; k1n++) {
 			Math::Convolution(predictPool1ResultZeroPadding[k1n], predictConv2Mats[k2n], pool1ResultSize, kernels2[k1n][k2n], kernel2Stride);
-			//편향의 평균을 더함
 			predictConv2Mats[k2n] += conv2ResultBiases[k1n][k2n];
 		}
+		//std::cout << predictConv2Mats[k2n] << std::endl;
 		Math::Relu(predictConv2Mats[k2n], predictConv2Mats[k2n]);
 		Math::CreateZeroPadding(predictConv2Mats[k2n], predictConv2ZeroPaddingMats[k2n], pool2ResultSize, poolSize, poolStride);
 		Math::MaxPooling(predictConv2ZeroPaddingMats[k2n], predictPool2Result[k2n], poolSize, poolStride);
 	}
-	
+
 	//완전연결신경망 입력
 	//4차원 pool2Result를 2차원 행렬 xMat으로 변환
 	//vec<vec<Mat>> to vec<vec<double>> 변환 : https://stackoverflow.com/questions/26681713/convert-mat-to-array-vector-in-opencv
@@ -485,34 +492,34 @@ void CNNMachine::ModelPredict(cv::InputArray _Input)
 	//cv::Mat predictNeuralInputMat;
 	//predictNeuralInputMat.create(cv::Size(0, tempArr.size()), CV_64FC1);
 
-	cv::Mat Sample(1, tempArr.size(), CV_64FC1, tempArr.data());
-	predictXMat.push_back(Sample);
-
-
-	//std::cout << predictXMat.size() << "w1Mat : " << w1Mat.size() << std::endl;
-
+	//cv::Mat Sample(1, tempArr.size(), CV_64FC1, tempArr.data());
+	//predictXMat.push_back(Sample);
+	predictXMat = cv::Mat(1, tempArr.size(), CV_64FC1, tempArr.data());
 	Math::NeuralNetwork(predictXMat, predictA1Mat, w1Mat);
 	double biases1Temp = 0;
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		biases1Temp += biases1[x1i];
 	}
 	//편향의 평균을 더함
+	predictA1Mat += biases1Temp / trainingMats.size();
+
 	Math::Relu(predictA1Mat, predictA1Mat);
 
 	Math::NeuralNetwork(predictA1Mat, predictYHatMat, w2Mat);
 
-	predictA1Mat += biases1Temp / trainingMats.size();
+	//std::cout << predictYHatMat << std::endl;
 	double biases2Temp = 0;
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
 		biases2Temp += biases2[x1i];
 	}
 	//편향의 평균을 더함
 	predictYHatMat += biases2Temp / trainingMats.size();
+
 	Math::SoftMax(predictYHatMat, predictYHatMat);
 
 	std::cout << "손글씨 숫자 예측 완료" << std::endl;
 	for (int x = 0; x < predictYHatMat.cols; x++) {
-		std::cout << x+1 <<"일 확률 : " << predictYHatMat.at<double>(0, x) * 100 << "%"<< std::endl;
+		std::cout << x + 1 << "일 확률 : " << predictYHatMat.at<double>(0, x) * 100 << "%" << std::endl;
 	}
 }
 
@@ -618,6 +625,13 @@ void CNNMachine::ReleaseVectors()
 	conv1BackpropFilters.clear();
 	yLossW2Relu3W1UpRelu2.clear();
 	yLossW2Relu3W1UpRelu2P1UpRelu.clear();
+	predictConv1Mats.clear();
+	predictConv1ZeroPaddingMats.clear();
+	predictConv2Mats.clear();
+	predictConv2ZeroPaddingMats.clear();
+	predictPool1Result.clear();
+	predictPool1ResultZeroPadding.clear();
+	predictPool2Result.clear();
 
 	w1Mat.release();
 	a1Mat.release();
@@ -681,7 +695,7 @@ bool CNNMachine::KeyEvent(int key)
 			cv::Mat paintScreen;
 			paintScreen.zeros(trainingMats[0].size(), CV_64FC1);
 
-			PaintWindow(paintScreen, "Paint", paintScreen.size() * 20, 13);
+			PaintWindow(paintScreen, "Paint", paintScreen.size() * 200, 13);
 
 			break;
 		}
@@ -788,16 +802,24 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 	cv::setMouseCallback(windowName, CallBackFunc, &inputScreen);
 	cv::resizeWindow(windowName, windowSize);
 
+	bool updateFlag = mouseLeftPress || mouseRightPress;
+	std::cout << "종료하려면 Enter키를 누르십시오" << std::endl;
 	do {
 		predictTickMeter.reset();
 		predictTickMeter.start();
-		system("cls");
 		cv::imshow(windowName, inputScreen);
+		if (updateFlag) {
+			system("cls");
+			std::cout << "종료하려면 Enter키를 누르십시오" << std::endl;
+			ModelPredict(inputScreen);
+			
+		}
+		updateFlag = mouseLeftPress || mouseRightPress;
 
-		ModelPredict(inputScreen);
 		predictTickMeter.stop();
 	
-	} while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
+	} //while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
+	while (cv::waitKeyEx(predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
 }
 
 //static 변수 초기화 (http://egloos.zum.com/kaludin/v/2461942)
@@ -825,7 +847,7 @@ void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata
 		cv::Mat& img = *((cv::Mat*)(userdata)); // 1st cast it back, then deref
 		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
 		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
-		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(0), cv::FILLED, cv::LineTypes::LINE_4);
+		cv::circle(img, cv::Point(x, y), 2, cv::Scalar(0), cv::FILLED, cv::LineTypes::LINE_4);
 	};
 
 	switch (event)
