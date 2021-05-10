@@ -1,6 +1,6 @@
 ﻿#include "CNNMachine.h"
 
-void CNNMachine::Training(int epoch, double learningRate, double l2)
+void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradientDescent)
 {
 	this->learningRate = learningRate;
 	
@@ -26,9 +26,48 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		trainingTickMeter.reset();
 		trainingTickMeter.start();
 
-#pragma region 정방향, 모델 손실(코스트), 역방향 계산
-		std::cout << "정방향 계산" << std::endl;
-		ForwardPropagation();
+#pragma region 정방향, 역방향 계산
+		std::cout << "정방향, 역방향 계산 중..." << std::endl;
+		switch (gradientDescent)
+		{
+		case CNNMachine::STOCHASTIC:
+		{
+			//훈련 샘플 순서를 섞어 역방향 업데이트
+			//c++ 셔플 함수 https://en.cppreference.com/w/cpp/algorithm/random_shuffle
+			int min = 0;
+			int max = trainingMats.size() - 1;
+			std::vector<int> trainingIndexs;
+			for (int i = min; i <= max; i++) {
+				trainingIndexs.push_back(i);
+			}
+
+			std::random_device rd;
+			std::mt19937 g(rd());
+
+			std::shuffle(trainingIndexs.begin(), trainingIndexs.end(), g);
+
+			for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
+				ForwardPropagationStochastic(trainingIndexs[x1i]);
+				BackPropagationStochastic(trainingIndexs[x1i]);
+			}
+		}
+			break;
+		case CNNMachine::MINI_BATCH:
+			for(int bi = 0; bi < 5; bi++)
+				ForwardPropagationMiniBatch(bi);
+			break;
+		case CNNMachine::BATCH:
+			ForwardPropagationBatch();
+			BackPropagationBatch();
+			break;
+		default:
+			ForwardPropagationBatch();
+			BackPropagationBatch();
+			break;
+		}
+
+#pragma endregion
+#pragma region 모델 손실(cost) 계산
 		loss = 0;
 		for (int y = 0; y < yMat.rows; y++) {
 			for (int x = 0; x < yMat.cols; x++) {
@@ -41,10 +80,7 @@ void CNNMachine::Training(int epoch, double learningRate, double l2)
 		lossAverages.push_back(lossAverages[nowEpoch - 1] + loss / nowEpoch);
 		std::cout << "코스트 : " << loss << std::endl;
 		std::cout << "코스트 평균 : " << lossAverages[nowEpoch] << std::endl;
-		std::cout << "역방향 계산 중..." << std::endl;
-		BackPropagation();
 #pragma endregion
-
 		trainingTickMeter.stop();
 	}
 }
@@ -210,7 +246,167 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 #pragma endregion
 }
 
-void CNNMachine::ForwardPropagation()
+void CNNMachine::ForwardPropagationStochastic(int trainingIndex)
+{
+}
+
+void CNNMachine::BackPropagationStochastic(int trainingIndex)
+{
+	//yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+	yLoss = yHatMat - yMat; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+	w2T = w2Mat.t();
+	yLossW2 = yLoss * w2T; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
+
+	//std::cout << "yLossW2\n" << yLossW2 <<std::endl;
+	//Relu(a1Mat)과 벡터곱
+	//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
+	//Math::Relu(a1Mat, a1Mat);
+	yLossW2Relu3 = yLossW2.mul(a1Mat); //손실함수를 완전연결층1 결과에 대해 미분한 값
+
+	//std::cout << "Relu(a1Mat)\n" << a1Mat << std::endl;
+	//std::cout << "Relu(a1Mat)과 벡터곱\n" << yLossW2Relu3 << std::endl;
+	yLossW2Relu3W1 = yLossW2Relu3 * w1Mat.t();
+
+	//yLossW2Relu3W1를 합성곱층 결과 크기로 차원 변환, 풀링2 필터로 Up-Sampleling, Relu(Conv2)행렬과 벡터곱
+	int shuffledIndex = trainingIndex;
+	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+		//Pooling 함수 역방향 계산으로 풀링 필터 할당
+		Math::GetMaxPoolingFilter(conv2ResultZeroPadMats[shuffledIndex][k2n], pool2BackpropFilters[shuffledIndex][k2n], pool2Result[shuffledIndex][k2n], poolSize, poolStride);
+		//풀링 필터로 업샘플링
+		cv::Mat sample = yLossW2Relu3W1.row(shuffledIndex).reshape(1, pool2Result[0].size()).row(k2n).reshape(1, pool2Result[0][0].rows);
+		Math::MaxPoolingBackprop(sample, yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], pool2BackpropFilters[shuffledIndex][k2n], poolSize, poolStride);
+
+		//Relu 함수 역방향 계산
+		//Up-Sampleling 결과 행렬과 Relu(Conv2)행렬을 벡터곱
+		yLossW2Relu3W1UpRelu2[shuffledIndex][k2n] = yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].mul(conv2ResultMats[shuffledIndex][k2n]);
+
+	}
+	//std::cout << "yLossW2Relu3W1UpRelu2[0][0]\n" << yLossW2Relu3W1UpRelu2[0][0] << std::endl;
+
+	//커널2 역방향 계산을 위한 합성곱2 필터 계산
+	Math::GetConvBackpropFilters(pool1Result[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
+	//커널1 역방향 계산을 위한 합성곱1 필터 계산
+	Math::GetConvBackpropFilters(trainingMats[0], &conv1BackpropFilters, kernels1[0][0], kernel1Stride);
+
+#pragma region 합성곱층1 가중치 행렬(커널1), 편향 역방향 계산
+	//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱하고, 풀링1 필터로 Up-Sampleling 후 Relu(Conv1)행렬과 벡터곱
+	int shuffledIndex = trainingIndex;
+	//커널 1 개수만큼 반복
+	for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+		cv::Mat yLossW2Relu3W1UpRelu2P1 = cv::Mat(yLossW2Relu3W1UpRelu2[shuffledIndex][0].size(), CV_64FC1);
+		yLossW2Relu3W1UpRelu2P1.setTo(0);
+
+		//커널 2 개수만큼 반복
+		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
+			cv::Mat conv2XBackprop;
+			//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱
+			Math::ConvXBackprop(yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], kernels2[k1n][k2n], conv2XBackprop, conv2BackpropFilters, kernel1Stride);
+			yLossW2Relu3W1UpRelu2P1 += yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].mul(conv2XBackprop);
+		}
+		//평균 계산으로 특성 스케일 정규화
+		yLossW2Relu3W1UpRelu2P1 /= kernels2[0].size();
+
+		//Pooling 함수 역방향 계산으로 풀링 필터 정의
+		Math::GetMaxPoolingFilter(conv1ResultZeroPadMats[shuffledIndex][k1n], pool1BackpropFilters[shuffledIndex][k1n], pool1Result[shuffledIndex][k1n], poolSize, poolStride);
+		//풀링 필터로 업샘플링
+		Math::MaxPoolingBackprop(yLossW2Relu3W1UpRelu2P1, yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n], pool1BackpropFilters[shuffledIndex][k1n], poolSize, poolStride);
+
+		//Relu 함수 역방향 계산
+		//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
+		//Math::Relu(conv1ResultMats[shuffledIndex][k1n], conv1ResultMats[shuffledIndex][k1n]);
+		yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n] = yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n].mul(conv1ResultMats[shuffledIndex][k1n]);
+	}
+
+	for (int k1c = 0; k1c < kernels1.size(); k1c++) {
+		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+			cv::Mat conv1KBackprops = cv::Mat::zeros(kernels1[0][0].size(), CV_64FC1);
+			double conv1BiasBackprop = 0;
+
+			int shuffledIndex = trainingIndex;
+			cv::Mat conv1KBackpropTemp;
+			Math::ConvKBackprop(yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n], x1ZeroPaddingMats[shuffledIndex], kernels1[0][0].size(), conv1KBackpropTemp, conv1BackpropFilters, kernel1Stride);
+			conv1KBackprops += conv1KBackpropTemp;
+
+			for (int bY = 0; bY < conv1ResultMats[0][0].rows; bY++) {
+				for (int bX = 0; bX < conv1ResultMats[0][0].cols; bX++) {
+					conv1BiasBackprop += yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n].at<double>(bY, bX);
+				}
+			}
+			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
+			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / (conv1ResultMats[0][0].rows * conv1ResultMats[0][0].cols * trainingMats.size());
+
+			kernels1[k1c][k1n] -= learningRate * conv1KBackprops / trainingMats.size();
+		}
+	}
+	//정규화
+	/*for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
+			kernels1[k1c][k1n] /= trainingMats.size();
+		}
+	}*/
+
+#pragma endregion
+
+#pragma region 합성곱층2 가중치 행렬(커널2), 편향 역방향 계산
+	for (int k2c = 0; k2c < kernels2.size(); k2c++) {
+		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
+			cv::Mat conv2KBackprops = cv::Mat::zeros(kernels2[0][0].size(), CV_64FC1);
+			double conv2BiasBackprop = 0;
+
+			int shuffledIndex = trainingIndex;
+			cv::Mat conv2KBackpropTemp;
+			Math::ConvKBackprop(yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], pool1ResultZeroPadding[shuffledIndex][k2c], kernels2[0][0].size(), conv2KBackpropTemp, conv2BackpropFilters, kernel2Stride);
+			conv2KBackprops += conv2KBackpropTemp;
+
+			for (int bY = 0; bY < conv2ResultMats[0][0].rows; bY++) {
+				for (int bX = 0; bX < conv2ResultMats[0][0].cols; bX++) {
+					conv2BiasBackprop += yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].at<double>(bY, bX);
+				}
+			}
+			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
+			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / (conv2ResultMats[0][0].rows * conv2ResultMats[0][0].cols * trainingMats.size());
+			kernels2[k2c][k2n] -= learningRate * conv2KBackprops / trainingMats.size();
+		}
+	}
+	//정규화
+	/*for (int k2n = 0; k2n < kernels1[0].size(); k2n++) {
+		for (int k2c = 0; k2c < kernels1.size(); k2c++) {
+			kernels2[k2c][k2n] /= trainingMats.size();
+		}
+	}*/
+
+#pragma endregion
+
+#pragma region 완전연결신경망층 가중치 행렬, 편향 역방향 계산
+	w1Mat -= learningRate * xMat.t() * (yLossW2Relu3) / yLossW2Relu3.rows;//평균을 계산해 간단한 특성 스케일 정규화
+	for (int y = 0; y < yLossW2Relu3.rows; y++) {
+		double bias1Backprop = 0;
+		for (int x = 0; x < yLossW2Relu3.cols; x++) {
+			bias1Backprop += yLossW2Relu3.at<double>(y, x);
+		}
+		biases1[y] -= learningRate * bias1Backprop / yLossW2Relu3.cols;
+	}
+
+	w2Mat -= learningRate * (a1Mat.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 정규화
+	for (int y = 0; y < yLoss.rows; y++) {
+		double bias2Backprop = 0;
+		for (int x = 0; x < yLoss.cols; x++) {
+			bias2Backprop += yLoss.at<double>(y, x);
+		}
+		biases2[y] -= learningRate * bias2Backprop / yLoss.cols;
+	}
+#pragma endregion
+}
+
+void CNNMachine::ForwardPropagationMiniBatch(int miniBatchIndex)
+{
+}
+
+void CNNMachine::BackPropagationMiniBatch(int miniBatchIndex)
+{
+}
+
+void CNNMachine::ForwardPropagationBatch()
 {
 	//합성곱층 결과 행렬을 완전연결신경망 입력으로 변환할 때 사용
 	std::vector<std::vector<double>> tempArr;
@@ -284,7 +480,7 @@ void CNNMachine::ForwardPropagation()
 	Math::SoftMax(yHatMat, yHatMat);
 }
 
-void CNNMachine::BackPropagation()
+void CNNMachine::BackPropagationBatch()
 {
 	//yLoss = -(yMat - yHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	yLoss = yHatMat - yMat; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
@@ -541,6 +737,7 @@ bool CNNMachine::SaveModel(cv::String fileName)
 	fs << "CLASSIFICATION_NUM"	<< classification_Num;
 	fs << "L1"					<< 0;
 	fs << "L2"					<< 0;
+	fs << "GradientDescent"		<< gradientDescent;
 	fs << "PoolSize"			<< poolSize;
 	fs << "PoolStride"			<< poolStride;
 	fs << "Kernel1Stride"		<< kernel1Stride;
@@ -577,8 +774,9 @@ bool CNNMachine::LoadModel(cv::String fileName)
 	fs["KERNEL1_NUM"]		>> kernel1_Num;
 	fs["KERNEL2_NUM"]		>> kernel2_Num;
 	fs["CLASSIFICATION_NUM"]>> classification_Num;
-	//fs["L1"]				>> 0;
-	//fs["L2"]				>> 0;
+	fs["L1"]				>> 0;
+	fs["L2"]				>> 0;
+	fs["GradientDescent"]	>> gradientDescent;
 	fs["PoolSize"]			>> poolSize;
 	fs["PoolStride"]		>> poolStride;
 	fs["Kernel1Stride"]		>> kernel1Stride;

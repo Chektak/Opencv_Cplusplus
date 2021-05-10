@@ -1,6 +1,11 @@
 #pragma once
 #include "framework.h"
 
+/// <summary>
+/// 특성 스케일 0~1로 정규화
+/// 전체 세트가 100이라면 훈련:테스트:검증 = 64:20:16 비율로 분리
+/// 에포크와 검증 세트 손실, 훈련 세트 손실 그래프로 최적점을 찾고, 훈련 조기 종료
+/// </summary>
 class CNNMachine
 {
 public:
@@ -110,13 +115,23 @@ public:
 	cv::Mat predictA1Mat;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
 	cv::Mat predictYHatMat;
 #pragma endregion
-
+	enum GD { STOCHASTIC, MINI_BATCH, BATCH };
+	GD gradientDescent = GD::BATCH;
 public:
-	void Training(int epoch, double learningRate, double l2);
+	void Training(int epoch, double learningRate, double l2, GD gradientDescent);
 	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num);
-	//정방향 계산
-	void ForwardPropagation();
-	void BackPropagation();
+	
+	void ForwardPropagationStochastic(int trainingIndex);
+	void BackPropagationStochastic(int trainingIndex);
+	
+	void ForwardPropagationMiniBatch(int miniBatchIndex);
+	void BackPropagationMiniBatch(int miniBatchIndex);
+
+	void ForwardPropagationBatch();
+	void BackPropagationBatch();
+	
+	
+
 	void ModelPredict(cv::InputArray _Input);
 
 	bool SaveModel(cv::String fileName);
