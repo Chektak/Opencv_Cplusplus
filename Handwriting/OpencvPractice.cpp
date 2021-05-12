@@ -73,7 +73,7 @@ void OpencvPractice::MatOp1()
 	cv::Mat mat4(2, 3, CV_64FC1, data);
 
 	cv::Mat mat5 = (cv::Mat_<double>(2, 3) << 1, 2, 3, 4, 5, 6);
-	cv::Mat mat6 = cv::Mat_<uchar>({ 2,3 }, { 1,2,3,4,5,6 });
+	cv::Mat mat6 = cv::Mat_<uint8_t>({ 2,3 }, { 1,2,3,4,5,6 });
 
 	mat4.create(256, 256, CV_8UC3);
 	mat5.create(4, 4, CV_64FC1);
@@ -242,15 +242,15 @@ void OpencvPractice::FaceScan()
 	cv::destroyAllWindows();
 }
 
-void OpencvPractice::MatPrint(std::vector<cv::Mat>& trainingVec, std::vector<cv::uint8_t>& labelVec)
+void OpencvPractice::MatPrint(std::vector<cv::Mat>& imageMats, std::vector<uint8_t>& labelVec)
 {
-	std::cout << "읽어온 훈련 데이터 수 : " << trainingVec.size() << std::endl;
+	std::cout << "읽어온 훈련 데이터 수 : " << imageMats.size() << std::endl;
 	std::cout << "읽어온 정답 데이터 수 : " << labelVec.size() << std::endl;
 
 	cv::namedWindow("Window", cv::WINDOW_NORMAL);
 
-	for (int i = 0; i < labelVec.size() && i < trainingVec.size(); i++) {
-		imshow("Window", trainingVec[i]);
+	for (int i = 0; i < labelVec.size() && i < imageMats.size(); i++) {
+		imshow("Window", imageMats[i]);
 		//std::cout << i << "번째 이미지 정답 : " << (int)labelVec[i] <<std::endl;
 		//아무 키나 누르면 다음
 		/*if (cv::waitKeyEx(0) != -1)
@@ -385,12 +385,12 @@ void OpencvPractice::CallBackFunc(int event, int x, int y, int flags, void* user
 
 
 //인자로 받은 vector에 Mnist 훈련 데이터를 파싱해 Matrix으로 저장
-void OpencvPractice::MnistTrainingDataRead(std::string filePath, std::vector<cv::Mat>& vec, int readDataNum)
+void OpencvPractice::MnistImageMatDataRead(std::string filePath, std::vector<cv::Mat>& vec, int readStartIndex, int readDataNum)
 {
 	std::ifstream file(filePath, std::ios::binary);
 	if (file.is_open())
 	{
-		int magic_number = 0;
+		int magic_number = 0; //
 		int number_of_images = 0;
 		int n_rows = 0;
 		int n_cols = 0;
@@ -406,21 +406,44 @@ void OpencvPractice::MnistTrainingDataRead(std::string filePath, std::vector<cv:
 		file.read((char*)&n_cols, sizeof(n_cols));
 		n_cols = ReverseInt(n_cols);
 		
+		std::cout << readDataNum << std::endl;
 		if (readDataNum > number_of_images || readDataNum <= 0)
 			readDataNum = number_of_images;
-
-		for (int i = 0; i < readDataNum; ++i)
+		std::cout << readDataNum << std::endl;
+		//startIndex직전까지 커서를 이동
+		//(magicnumber에서 얻은 행렬 타입 정보가 unsigned byte 1채널 행렬일 경우)
+		if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
+			//현재 커서로부터 첫번째 인자만큼 커서를 이동
+			file.seekg(sizeof(unsigned char) * readStartIndex * n_rows * n_cols, std::ios::cur);
+		}
+		//for (int i = 0; i < readStartIndex; ++i)
+		//{
+		//	for (int r = 0; r < n_rows; ++r)
+		//	{
+		//		for (int c = 0; c < n_cols; ++c)
+		//		{
+		//			//magicnumber에서 얻은 타입 정보가 unsigned byte 일 경우
+		//			if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
+		//				unsigned char temp = 0;
+		//				file.read((char*)&temp, sizeof(temp));
+		//			}
+		//		}
+		//	}
+		//}
+		
+		//startIndex부터 startIndex + readDataNum까지 읽기
+		for (int i = readStartIndex; i < readStartIndex + readDataNum; ++i)
 		{
 			cv::Mat tp = cv::Mat::zeros(n_rows, n_cols, ConvertCVGrayImageType(magic_number));
 			for (int r = 0; r < n_rows; ++r)
 			{
 				for (int c = 0; c < n_cols; ++c)
 				{
-					//magicnumber에서 얻은 타입 정보가 unsigned byte 일 경우
+					//magicnumber에서 얻은 행렬 타입 정보가 unsigned byte 1채널 행렬일 경우
 					if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
 						unsigned char temp = 0;
 						file.read((char*)&temp, sizeof(temp));
-						tp.at<uchar>(r, c) = (int)temp;
+						tp.at<uint8_t>(r, c) = (int)temp;
 					}
 				}
 			}
@@ -429,7 +452,7 @@ void OpencvPractice::MnistTrainingDataRead(std::string filePath, std::vector<cv:
 	}
 }
 
-void OpencvPractice::MnistLabelDataRead(std::string filePath, std::vector<uint8_t>& vec, int readDataNum)
+void OpencvPractice::MnistImageLabelDataRead(std::string filePath, std::vector<uint8_t>& vec, int readStartIndex, int readDataNum)
 {
 	std::ifstream file(filePath, std::ios::binary);
 	if (file.is_open())
@@ -446,9 +469,16 @@ void OpencvPractice::MnistLabelDataRead(std::string filePath, std::vector<uint8_
 		if (readDataNum > number_of_images || readDataNum <= 0)
 			readDataNum = number_of_images;
 
-		for (int i = 0; i < readDataNum; ++i)
+		//startIndex직전까지 커서를 이동
+		//(magicnumber에서 얻은 행렬 타입 정보가 unsigned byte 1채널 행렬일 경우)
+		if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
+			//현재 커서로부터 첫번째 인자만큼 커서를 이동
+			file.seekg(sizeof(uint8_t) * readStartIndex, std::ios::cur);
+		}
+
+		for (int i = readStartIndex; i < readStartIndex + readDataNum; ++i)
 		{
-			//magicnumber에서 얻은 타입 정보가 unsigned byte 일 경우
+			//magicnumber에서 얻은 행렬 타입 정보가 unsigned byte 1채널 행렬일 경우
 			if (ConvertCVGrayImageType(magic_number) == CV_8UC1) {
 				uint8_t temp = 0;
 				file.read((char*)&temp, sizeof(temp));

@@ -53,17 +53,17 @@ int main() {
 	//std::cin >> KERNEL2_NUM;
 	//op.PaintWindow(cv::Mat(), cv::Mat(), "Paint", cv::Size(560, 560), 13, NULL);
 
-	std::vector<cv::Mat> trainingVec;
-	std::vector<uchar> labelVec;
-	op.MnistTrainingDataRead("Resources/train-images.idx3-ubyte", trainingVec, USEDATA_NUM);
-	op.MnistLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, USEDATA_NUM);
-	op.MatPrint(trainingVec, labelVec);
+	std::vector<cv::Mat> imageMats;
+	std::vector<uint8_t> labelVec;
+	//op.MnistImageMatDataRead("Resources/train-images.idx3-ubyte", imageMats, 0, USEDATA_NUM);
+	//op.MnistImageLabelDataRead("Resources/train-labels.idx1-ubyte", labelVec, 0, USEDATA_NUM);
+	//op.MatPrint(imageMats, labelVec);
 	CNNMachine cnn;
 	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;
 	std::cout.precision(15);
-	cnn.Training(-1, 0.0001, 1);
+	cnn.Training(-1, 0.0001, 1, CNNMachine::GD::BATCH);
 	std::cout << "END" << std::endl;
 
 	//교사 상관 함수 역방향 필터 계산 테스트
