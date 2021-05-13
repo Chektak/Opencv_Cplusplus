@@ -250,7 +250,7 @@ void OpencvPractice::MatPrint(std::vector<cv::Mat>& imageMats, std::vector<uint8
 	cv::namedWindow("Window", cv::WINDOW_NORMAL);
 
 	for (int i = 0; i < labelVec.size() && i < imageMats.size(); i++) {
-		imshow("Window", imageMats[i]);
+		imshow("HandWriting", imageMats[i]);
 		//std::cout << i << "번째 이미지 정답 : " << (int)labelVec[i] <<std::endl;
 		//아무 키나 누르면 다음
 		/*if (cv::waitKeyEx(0) != -1)

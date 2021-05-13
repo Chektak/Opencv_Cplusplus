@@ -5,8 +5,11 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradient
 	this->learningRate = learningRate;
 	
 	lossAverages.push_back(0);
+		cv::imshow("Window", mnistImageMats[nowEpoch % mnistImageMats.size()]);
 	//epoch가 0 이하로 입력되면 무한 반복
 	for (nowEpoch = 1; (epoch <= 0) ? true : nowEpoch <= epoch; nowEpoch++) {
+		//cv::imshow("HandWriting", mnistImageMats[nowEpoch % mnistImageMats.size()]);
+
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
 		std::cout << nowEpoch << "번째 훈련" << std::endl;
 		std::cout << "[명령어 0 : Menu 열기 | 1 : Auto Training | 2 : Model Save 모델 저장 | 3 : Model Load 모델 불러오기" << std::endl;
@@ -181,39 +184,15 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 
 void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num)
 {
-	
-	std::vector<cv::Mat> imageMats;	   
-	std::vector<uint8_t> imageLabels;
 	this->useData_Num = useData_Num;
 	this->kernel1_Num = kernel1_Num;
 	this->kernel2_Num = kernel2_Num;
 	this->classification_Num = classification_Num;
-	std::cout << useData_Num << std::endl;
-	op->MnistImageMatDataRead("Resources/train-images.idx3-ubyte", imageMats, 0,useData_Num);
-	op->MnistImageLabelDataRead("Resources/train-labels.idx1-ubyte", imageLabels, 0,useData_Num);
+	op->MnistImageMatDataRead("Resources/train-images.idx3-ubyte", mnistImageMats, 0,useData_Num);
+	op->MnistImageLabelDataRead("Resources/train-labels.idx1-ubyte", mnistImageLabels, 0,useData_Num);
 
-	SplitData(imageMats, imageLabels, 16, 4, 5);
+	SplitData(mnistImageMats, mnistImageLabels, 16, 4, 5);
 
-//	for (int i = 0; i < imageMats.size(); i++) {
-//		trainingMats.push_back(cv::Mat());
-//		trainingConv1x1ZeroPaddingMats.push_back(cv::Mat_<double>());
-//
-//		//uint8_t형 행렬 요소를 double형 행렬 요소로 타입 캐스팅
-//		imageMats[i].convertTo(trainingMats[i], CV_64FC1);
-//		//평균을 계산해 간단한 특성 스케일 정규화
-//		trainingMats[i] /= 255;
-//	}
-//
-//#pragma region 정답 데이터 행렬과 가설 행렬 초기화
-//	//정답 데이터를 벡터로 변환한다.
-//	trainingYMat = cv::Mat::zeros(cv::Size(classification_Num, trainingMats.size()), CV_64FC1);
-//	for (int y = 0; y < labelVec.size(); y++) {
-//		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
-//		trainingYMat.at<double>(y, labelVec[y]) = 1;
-//	}
-//
-//	trainingNeuralYHatMat.create(cv::Size(classification_Num, trainingMats.size()), CV_64FC1);
-//#pragma endregion
 	poolStride = cv::Size(2, 2);
 	poolSize = cv::Size(2, 2);
 
@@ -985,7 +964,7 @@ bool CNNMachine::KeyEvent(int key)
 			cv::Mat paintScreen;
 			paintScreen.zeros(trainingMats[0].size(), CV_64FC1);
 
-			PaintWindow(paintScreen, "Paint", paintScreen.size() * 200, 13);
+			PaintWindow(paintScreen, "HandWriting", paintScreen.size() * 200, 13);
 
 			break;
 		}
@@ -1105,13 +1084,23 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 			ModelPredict(inputScreen, predictNeuralYHatMat);
 			std::cout << "손글씨 숫자 예측 완료" << std::endl;
 			for (int x = 0; x < predictNeuralYHatMat.cols; x++) {
-				std::cout << x + 1 << "일 확률 : " << predictNeuralYHatMat.at<double>(0, x) * 100 << "%" << std::endl;
+				std::cout << x << "일 확률 : " << predictNeuralYHatMat.at<double>(0, x) * 100 << "%" << std::endl;
+
+			}
+			if (mouseLeftPress) {
+				mouseLeftPressMiliSecond += predictTickMeter.getTimeMilli() + 1;
+				//std::cout << mouseLeftPressMiliSecond << std::endl;
+				std::cout << predictTickMeter.getTimeMilli() << std::endl;
+			}
+			else
+			{
+				mouseLeftPressMiliSecond = 0;
 			}
 		}
 		updateFlag = mouseLeftPress || mouseRightPress;
-
+		
 		predictTickMeter.stop();
-	
+		
 	} //while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
 	while (cv::waitKeyEx(predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
 }
@@ -1120,6 +1109,7 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 cv::Point CNNMachine::mousePt(0, 0);
 bool CNNMachine::mouseLeftPress = false;
 bool CNNMachine::mouseRightPress = false;
+double CNNMachine::mouseLeftPressMiliSecond = 0;
 
 void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata)
 {
@@ -1133,6 +1123,9 @@ void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata
 		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
 		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
 		//cv::circle(img, cv::Point(x, y), 2, cv::Scalar(0.8), cv::FILLED, cv::LineTypes::LINE_4);
+		//double thick = mouseLeftPressMiliSecond / 1000;
+		//std::cout << thick << std::endl;
+		//cv::circle(img, cv::Point(x, y), 1, cv::Scalar(thick <= 1 ? thick : 1), cv::FILLED, cv::LineTypes::LINE_4);
 		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(1), cv::FILLED, cv::LineTypes::LINE_4);
 	};
 
@@ -1166,6 +1159,7 @@ void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata
 	case cv::EVENT_LBUTTONUP:
 	{
 		mouseLeftPress = false;
+		
 		break;
 	}
 	case cv::EVENT_RBUTTONDOWN:

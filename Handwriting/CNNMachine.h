@@ -9,11 +9,14 @@
 class CNNMachine
 {
 public:
+	std::vector<cv::Mat> mnistImageMats;//전체 이미지 세트
+	std::vector<uint8_t> mnistImageLabels;//전체 라벨 세트
 	//훈련 데이터 순서 : 데이터 수, 행렬
 	//(채널 수는 흑백 이미지 입력만을 가정하므로 생략)
-	std::vector<cv::Mat> trainingMats; //훈련 세트 = 합성곱층 1 (Conv1) 입력 행렬
-	std::vector<cv::Mat> validationMats; //검증 세트
-	std::vector<cv::Mat> testMats; //테스트(시험) 세트
+
+	std::vector<cv::Mat> trainingMats; //훈련 이미지 세트 = 합성곱층 1 (Conv1) 입력 행렬
+	std::vector<cv::Mat> validationMats; //검증 이미지 세트
+	std::vector<cv::Mat> testMats; //테스트(시험) 이미지 세트
 	cv::Mat trainingYMat;//훈련 정답(라벨) 행렬
 	cv::Mat validationYMat;//검증 정답(라벨) 행렬
 	cv::Mat testYMat;//테스트 정답(라벨) 행렬
@@ -114,6 +117,8 @@ public:
 	static cv::Point mousePt;
 	static bool mouseLeftPress;
 	static bool mouseRightPress;
+	static double mouseLeftPressMiliSecond;
+
 #pragma endregion
 
 #pragma region 학습된 모델로 예측할 때 사용
