@@ -57,7 +57,7 @@ int main() {
 	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;
-	std::cout.precision(15);
+	std::cout.precision(6);
 	cnn.Training(-1, 0.0001, 1, CNNMachine::GD::BATCH);
 	std::cout << "END" << std::endl;
 

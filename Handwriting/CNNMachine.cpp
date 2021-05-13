@@ -1,14 +1,16 @@
 ﻿#include "CNNMachine.h"
 
-void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradientDescent)
+void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine::GD gradientDescent)
 {
 	this->learningRate = learningRate;
 	
 	lossAverages.push_back(0);
-		cv::imshow("Window", mnistImageMats[nowEpoch % mnistImageMats.size()]);
+	cv::namedWindow("Window", cv::WINDOW_NORMAL);
+	cv::imshow("Window", mnistImageMats[nowEpoch % mnistImageMats.size()]);
+	cv::resizeWindow("Window", cv::Size(28, 28) * 8);
 	//epoch가 0 이하로 입력되면 무한 반복
 	for (nowEpoch = 1; (epoch <= 0) ? true : nowEpoch <= epoch; nowEpoch++) {
-		//cv::imshow("HandWriting", mnistImageMats[nowEpoch % mnistImageMats.size()]);
+		cv::imshow("Window", mnistImageMats[nowEpoch % mnistImageMats.size()]);
 
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
 		std::cout << nowEpoch << "번째 훈련" << std::endl;
@@ -21,7 +23,8 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradient
 		//while (key != -1) {
 		//	key = cv::waitKeyEx(1);
 		//}
-		key = cv::waitKeyEx((int)autoTraining * ((autoTrainingDelay <= 0) ? trainingTickMeter.getTimeMilli() + 200 : autoTrainingDelay));
+		key = cv::waitKeyEx((int)autoTraining * ((autoTrainingDelay <= 0) ? trainingTickMeter.getTimeMilli() / 5 + 200 : autoTrainingDelay));
+		//key = cv::waitKeyEx((int)autoTraining * ((autoTrainingDelay <= 0) ? 200 : autoTrainingDelay));
 		if (KeyEvent(key) == false){
 			continue;
 		}
@@ -33,7 +36,7 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradient
 		std::cout << "정방향, 역방향 계산 중..." << std::endl;
 		switch (gradientDescent)
 		{
-		case CNNMachine::STOCHASTIC:
+		case CNNMachine::GD::STOCHASTIC:
 		{
 		//	//훈련 샘플 순서를 섞어 역방향 업데이트
 		//	//c++ 셔플 함수 https://en.cppreference.com/w/cpp/algorithm/random_shuffle
@@ -55,13 +58,13 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradient
 		//	}
 		}
 			break;
-		case CNNMachine::MINI_BATCH:
+		case CNNMachine::GD::MINI_BATCH:
 		/*{
 			for (int bi = 0; bi < 5; bi++)
 				ForwardPropagationMiniBatch(bi);
 		}*/
 			break;
-		case CNNMachine::BATCH:
+		case CNNMachine::GD::BATCH:
 		{
 			ForwardPropagationBatch();
 			BackPropagationBatch();
@@ -114,7 +117,7 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradient
 		//}
 		//loss /= -trainingYMat.rows;
 
-		lossAverages.push_back(lossAverages[nowEpoch - 1] + loss / nowEpoch);
+		lossAverages.push_back(lossAverages[(double)nowEpoch - 1] + loss / nowEpoch);
 		std::cout << "코스트 : " << loss << std::endl;
 		std::cout << "코스트 평균 : " << lossAverages[nowEpoch] << std::endl;
 #pragma endregion
@@ -122,9 +125,9 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, GD gradient
 	}
 }
 
-void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std::vector<uint8_t>& mnistImageLabels, const int &trainingSetRatio, const int &validationSetRatio, const int &testSetRatio)
+void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std::vector<uint8_t>& mnistImageLabels, const int& trainingSetRatio, const int& validationSetRatio, const int& testSetRatio)
 {
- 	const double ratioAtom = mnistImageMats.size() / ((double)trainingSetRatio + validationSetRatio + testSetRatio);
+	const double ratioAtom = mnistImageMats.size() / ((double)trainingSetRatio + validationSetRatio + testSetRatio);
 	const int trainingSetSize = cvRound(ratioAtom * trainingSetRatio);
 	const int validationSetSize = cvRound(ratioAtom * validationSetRatio);
 	const int testSetSize = cvRound(ratioAtom * testSetRatio);
@@ -145,17 +148,17 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 		validationMats.push_back(cv::Mat());
 
 		//uint8_t형 행렬 요소를 double형 행렬 요소로 타입 캐스팅
-		mnistImageMats[i].convertTo(validationMats[i-trainingSetSize], CV_64FC1);
+		mnistImageMats[i].convertTo(validationMats[i - (double)trainingSetSize], CV_64FC1);
 		//평균을 계산해 간단한 특성 스케일 정규화
-		validationMats[i - trainingSetSize] /= 255;
+		validationMats[i - (double)trainingSetSize] /= 255;
 	}
 	for (int i = trainingSetSize + validationSetSize; i < trainingSetSize + validationSetSize + testSetSize; i++) {
 		testMats.push_back(cv::Mat());
 
 		//uint8_t형 행렬 요소를 double형 행렬 요소로 타입 캐스팅
-		mnistImageMats[i].convertTo(testMats[i - (trainingSetSize + validationSetSize)], CV_64FC1);
+		mnistImageMats[i].convertTo(testMats[i - ((double)trainingSetSize + validationSetSize)], CV_64FC1);
 		//평균을 계산해 간단한 특성 스케일 정규화
-		testMats[i - (trainingSetSize + validationSetSize)] /= 255;
+		testMats[i - ((double)trainingSetSize + validationSetSize)] /= 255;
 	}
 
 #pragma region 정답 데이터 행렬과 가설 행렬 초기화
@@ -407,7 +410,7 @@ void CNNMachine::BackPropagationStochastic(int trainingIndex)
 				}
 			}
 			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
-			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / (trainingConv1ResultMats[0][0].rows * trainingConv1ResultMats[0][0].cols * trainingMats.size());
+			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / ((double)trainingConv1ResultMats[0][0].rows * trainingConv1ResultMats[0][0].cols * trainingMats.size());
 
 			kernels1[k1c][k1n] -= learningRate * conv1KBackprops / trainingMats.size();
 		}
@@ -437,7 +440,7 @@ void CNNMachine::BackPropagationStochastic(int trainingIndex)
 				}
 			}
 			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
-			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / (trainingConv2ResultMats[0][0].rows * trainingConv2ResultMats[0][0].cols * trainingMats.size());
+			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / ((double)trainingConv2ResultMats[0][0].rows * trainingConv2ResultMats[0][0].cols * trainingMats.size());
 			kernels2[k2c][k2n] -= learningRate * conv2KBackprops / trainingMats.size();
 		}
 	}
@@ -522,7 +525,7 @@ void CNNMachine::ForwardPropagationBatch()
 		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 			tempMat = trainingPool2Result[x1i][k2n];
 			for (int i = 0; i < tempMat.rows; ++i) {
-				tempArr[x1i].insert(tempArr[x1i].end(), tempMat.ptr<double>(i), tempMat.ptr<double>(i) + tempMat.cols * tempMat.channels());
+				tempArr[x1i].insert(tempArr[x1i].end(), tempMat.ptr<double>(i), tempMat.ptr<double>(i) + (tempMat.cols) * tempMat.channels());
 			}
 		}
 	}
@@ -638,7 +641,7 @@ void CNNMachine::BackPropagationBatch()
 				
 			}
 			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
-			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / (trainingConv1ResultMats[0][0].rows * trainingConv1ResultMats[0][0].cols * trainingMats.size());
+			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / ((double)trainingConv1ResultMats[0][0].rows * trainingConv1ResultMats[0][0].cols * trainingMats.size());
 
 			kernels1[k1c][k1n] -= learningRate * conv1KBackprops / trainingMats.size();
 		}
@@ -670,7 +673,7 @@ void CNNMachine::BackPropagationBatch()
 				}
 			}
 			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
-			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / (trainingConv2ResultMats[0][0].rows * trainingConv2ResultMats[0][0].cols * trainingMats.size());
+			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / ((double)trainingConv2ResultMats[0][0].rows * trainingConv2ResultMats[0][0].cols * trainingMats.size());
 			kernels2[k2c][k2n] -= learningRate * conv2KBackprops / trainingMats.size();
 		}
 	}
@@ -963,8 +966,7 @@ bool CNNMachine::KeyEvent(int key)
 			std::cout << "Enter : 손글씨 예측 종료 | Mouse LeftButton : Draw | Mouse RightButton : Erase" << std::endl;
 			cv::Mat paintScreen;
 			paintScreen.zeros(trainingMats[0].size(), CV_64FC1);
-
-			PaintWindow(paintScreen, "HandWriting", paintScreen.size() * 200, 13);
+			PaintWindow(paintScreen, "HandWriting", cv::Size(28,28), 13);
 
 			break;
 		}
@@ -1068,16 +1070,26 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 
 	cv::namedWindow(windowName, cv::WINDOW_NORMAL);
 	cv::imshow(windowName, inputScreen);
+	cv::resizeWindow(windowName, windowSize * 14);
 	cv::setMouseCallback(windowName, CallBackFunc, &inputScreen);
-	cv::resizeWindow(windowName, windowSize);
 
-	bool updateFlag = mouseLeftPress || mouseRightPress;
+	bool pressFlag = mouseLeftPress || mouseRightPress;
+	bool upFlag = mouseLeftUp || mouseRightUp;
+	double criticalMiliSecond = 15;
+	//critical ms보다 연산 시간이 적다면 마우스를 움직일 때마다 연산한다. 연산 시간이 많다면 마우스 버튼을 뗄 때 연산
+	bool updateFlag = predictTickMeter.getTimeMilli() < criticalMiliSecond ? pressFlag : upFlag;
 	std::cout << "종료하려면 Enter키를 누르십시오" << std::endl;
 
 	do {
 		predictTickMeter.reset();
 		predictTickMeter.start();
 		cv::imshow(windowName, inputScreen);
+		pressFlag = mouseLeftPress || mouseRightPress;
+		upFlag = mouseLeftUp || mouseRightUp;
+		
+		//critical ms보다 연산 시간이 적다면 마우스를 움직일 때마다 연산한다. 연산 시간이 많다면 마우스 버튼을 뗄 때 연산
+		//updateFlag = predictTickMeter.getTimeMilli() < criticalMiliSecond ? pressFlag : upFlag;
+		updateFlag = upFlag;
 		if (updateFlag) {
 			system("cls");
 			std::cout << "종료하려면 Enter키를 누르십시오" << std::endl;
@@ -1087,45 +1099,62 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 				std::cout << x << "일 확률 : " << predictNeuralYHatMat.at<double>(0, x) * 100 << "%" << std::endl;
 
 			}
-			if (mouseLeftPress) {
-				mouseLeftPressMiliSecond += predictTickMeter.getTimeMilli() + 1;
-				//std::cout << mouseLeftPressMiliSecond << std::endl;
-				std::cout << predictTickMeter.getTimeMilli() << std::endl;
+			
+		}
+		predictTickMeter.stop();
+		if (updateFlag) {
+			std::cout << "이번 연산에 " << predictTickMeter.getTimeMilli() << "ms 경과" << std::endl;
+			if (predictTickMeter.getTimeMilli() < criticalMiliSecond) {
+				std::cout << predictTickMeter.getTimeMilli() << " < " << criticalMiliSecond << " , 다음 연산은 마우스 버튼을 눌렀을 때마다 연산" << std::endl;
 			}
-			else
-			{
-				mouseLeftPressMiliSecond = 0;
+			else {
+				std::cout << predictTickMeter.getTimeMilli() << " >= " << criticalMiliSecond << " , 다음 연산은 마우스 버튼을 올렸을 때 연산" << std::endl;
 			}
 		}
-		updateFlag = mouseLeftPress || mouseRightPress;
-		
-		predictTickMeter.stop();
-		
-	} //while (cv::waitKeyEx(predictTickMeter.getTimeMilli() <= 0 ? 1 : predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
+
+		/*double delta = ((double)prevMousePt.x * prevMousePt.x + (double)prevMousePt.y * prevMousePt.y) - ((double)mousePt.x * mousePt.x + (double)mousePt.y * mousePt.y);
+		mouseMoveSpeed = predictTickMeter.getTimeMilli() * 100 / (1 + Math::Absolute(delta));*/
+		if (mouseLeftPress) {
+			mouseLeftPressMiliSecond += predictTickMeter.getTimeMilli() + 10;
+
+		}
+		else
+		{
+			mouseLeftPressMiliSecond = 0;
+		}
+	}
 	while (cv::waitKeyEx(predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
 }
 
 //static 변수 초기화 (http://egloos.zum.com/kaludin/v/2461942)
 cv::Point CNNMachine::mousePt(0, 0);
+cv::Point CNNMachine::prevMousePt(0, 0);
 bool CNNMachine::mouseLeftPress = false;
 bool CNNMachine::mouseRightPress = false;
+bool CNNMachine::mouseLeftUp = false;
+bool CNNMachine::mouseRightUp = false;
 double CNNMachine::mouseLeftPressMiliSecond = 0;
+bool CNNMachine::mouseMove = false;
 
 void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata)
 {
+	prevMousePt = mousePt;
 	mousePt.x = x;
 	mousePt.y = y;
-
+	mouseLeftUp = false;
+	mouseRightUp = false;
+	mouseMove = false;
 	//람다 익명함수 사용
 	auto drawCircle = [](int x, int y, void* userdata) {
 
 		cv::Mat& img = *((cv::Mat*)(userdata)); // 1st cast it back, then deref
 		//opencv 도형 그리기 함수 인자 : https://opencv-python.readthedocs.io/en/latest/doc/03.drawShape/drawShape.html
 		//공식 문서 : https://docs.opencv.org/4.5.1/d6/d6e/group__imgproc__draw.html
-		//cv::circle(img, cv::Point(x, y), 2, cv::Scalar(0.8), cv::FILLED, cv::LineTypes::LINE_4);
-		//double thick = mouseLeftPressMiliSecond / 1000;
-		//std::cout << thick << std::endl;
-		//cv::circle(img, cv::Point(x, y), 1, cv::Scalar(thick <= 1 ? thick : 1), cv::FILLED, cv::LineTypes::LINE_4);
+
+		/*double timeThick = mouseLeftPressMiliSecond / 1000;
+		double basicThick = 0.6;
+		double thick = basicThick + (timeThick <= 1 - basicThick ? timeThick : 1 - basicThick);
+		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(thick), cv::FILLED, cv::LineTypes::LINE_4);*/
 		cv::circle(img, cv::Point(x, y), 1, cv::Scalar(1), cv::FILLED, cv::LineTypes::LINE_4);
 	};
 
@@ -1141,6 +1170,7 @@ void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata
 	{
 	case cv::EVENT_MOUSEMOVE:
 	{
+		mouseMove = true;
 		if (mouseLeftPress == true)
 		{
 			drawCircle(x, y, userdata);
@@ -1159,7 +1189,7 @@ void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata
 	case cv::EVENT_LBUTTONUP:
 	{
 		mouseLeftPress = false;
-		
+		mouseLeftUp = true;
 		break;
 	}
 	case cv::EVENT_RBUTTONDOWN:
@@ -1168,6 +1198,7 @@ void CNNMachine::CallBackFunc(int event, int x, int y, int flags, void* userdata
 		break;
 	case cv::EVENT_RBUTTONUP:
 		mouseRightPress = false;
+		mouseRightUp = true;
 		break;
 	}
 }

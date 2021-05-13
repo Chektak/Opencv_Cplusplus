@@ -101,7 +101,7 @@ public:
 	int kernel2_Num = 0;
 	int classification_Num = CLASSIFICATIONNUM;
 
-	enum GD { STOCHASTIC, MINI_BATCH, BATCH };
+	enum class GD { STOCHASTIC, MINI_BATCH, BATCH };
 	GD gradientDescent = GD::BATCH;
 #pragma endregion
 
@@ -115,8 +115,13 @@ public:
 	OpencvPractice* op;
 
 	static cv::Point mousePt;
+	static cv::Point prevMousePt;
 	static bool mouseLeftPress;
 	static bool mouseRightPress;
+	static bool mouseLeftUp;
+	static bool mouseRightUp;
+	static bool mouseMove;
+	double mouseMoveSpeed;
 	static double mouseLeftPressMiliSecond;
 
 #pragma endregion
@@ -140,7 +145,7 @@ public:
 
 public:
 	
-	void Training(int epoch, double learningRate, double l2, GD gradientDescent);
+	void Training(int epoch, double learningRate, double l2, CNNMachine::GD gradientDescent);
 	void SplitData(const std::vector<cv::Mat> &mnistImageMats, const std::vector<uint8_t> &mnistImageLabels, const int& trainingSetRatio, const int& validationSetRatio, const int& testSetRatio);
 	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num);
 	

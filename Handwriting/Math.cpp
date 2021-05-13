@@ -379,3 +379,8 @@ void Math::SoftMax(cv::InputArray _Input, cv::OutputArray _Output)
 	}
 
 }
+
+double Math::Absolute(double value)
+{
+	return value < 0 ? value * -1 : value;
+}

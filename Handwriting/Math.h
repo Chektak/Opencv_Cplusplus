@@ -37,5 +37,7 @@ namespace Math {
     //1차원 배열 요소 각각에 대한 Softmax를 행렬로 반환
     void SoftMax(cv::InputArray _Input, cv::OutputArray _Output);
 
+    //절댓값 반환
+    double Absolute(double value);
     //double SafeLog()
 };
