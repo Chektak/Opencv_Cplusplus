@@ -54,7 +54,23 @@ int main() {
 	//op.PaintWindow(cv::Mat(), cv::Mat(), "Paint", cv::Size(560, 560), 13, NULL);
 
 	CNNMachine cnn;
-	cnn.Init(&op, USEDATA_NUM, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
+	bool loadModelYesOrNo;
+	int useDataNum = 0;
+	bool loadSucceed = false;
+
+	std::cout << "저장된 모델을 불러오시겠습니까? (Yes : 1, No : 0)" << std::endl;
+	std::cin >> loadModelYesOrNo;
+	if (loadModelYesOrNo)
+	{
+		loadSucceed = cnn.LoadModel("Model.json");
+		if(!loadSucceed)
+			std::cout << "저장된 모델 불러오기에 실패했습니다." << std::endl;
+	}
+	if(!loadModelYesOrNo || !loadSucceed){
+		std::cout << "사용할 전체 데이터셋 수를 입력해주세요." << std::endl;
+		std::cin >> useDataNum;
+		cnn.Init(&op, useDataNum, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
+	}
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;
 	std::cout.precision(6);
