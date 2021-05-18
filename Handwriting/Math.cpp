@@ -384,3 +384,27 @@ double Math::Absolute(double value)
 {
 	return value < 0 ? value * -1 : value;
 }
+
+void Math::OneHotEncoding(cv::InputArray _Input, cv::OutputArray _Output)
+{
+	cv::Mat input = _Input.getMat();
+	input.copyTo(_Output);
+	cv::Mat output = _Output.getMat();
+	
+	cv::Point maxValueIndex;
+	for (int y = 0; y < output.rows; y++) {
+		//해당 열의 최댓값 요소를 가진 인덱스를 구한다
+		cv::minMaxLoc(output.row(y), 0, 0, 0, &maxValueIndex);
+
+		output.row(y).setTo(0);
+		output.at<double>(y, maxValueIndex.x) = 1;
+	}
+}
+
+double Math::Clip(double min, double max, const double& _InputValue) {
+	if (_InputValue < min)
+		return min;
+	else if (_InputValue > max)
+		return max;
+	return _InputValue;
+}

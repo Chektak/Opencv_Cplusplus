@@ -18,8 +18,8 @@ public:
 	std::vector<cv::Mat> validationMats; //검증 이미지 세트
 	std::vector<cv::Mat> testMats; //테스트(시험) 이미지 세트
 	cv::Mat trainingYMat;//훈련 정답(라벨) 행렬
-	cv::Mat validationYMat;//검증 정답(라벨) 행렬
-	cv::Mat testYMat;//테스트 정답(라벨) 행렬
+	std::vector<int> validationLabels; //검증 이미지 세트
+	std::vector<int> testLabels;//테스트 정답(라벨) 행렬
 	cv::Mat trainingNeuralYHatMat;//모델 훈련 예측행렬
 	cv::Mat validationNeuralYHatMat;//모델 검증 예측행렬
 	cv::Mat testNeuralYHatMat;//모델 테스트 예측행렬
@@ -50,9 +50,9 @@ public:
 	cv::Mat trainingNeuralX1Mat;//완전연결신경망 1층 입력 (trainingPool2Result를 2차원으로 펼친 형태, 행 : 합성곱 1층 입력 데이터 수, 열 : 풀링층2 결과의 채널 수 * 행 * 열) 
 	cv::Mat neuralW1Mat;//완전연결신경망 1층 입력
 	std::vector<double> neuralBiases1; //완전연결신경망 1층 입력, trainingNeuralX1Mat의 행 수만큼의 bias
-	cv::Mat trainingNeuralX2;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
-	cv::Mat neuralW2;//완전연결신경망 2층 입력
-	std::vector<double> neuralBiases2; //완전연결신경망 2층 입력, trainingNeuralX2의 행 수만큼의 bias
+	cv::Mat trainingNeuralX2Mat;//완전연결신경망 1층 결과, 완전연결신경망 2층 입력
+	cv::Mat neuralW2Mat;//완전연결신경망 2층 입력
+	std::vector<double> neuralBiases2; //완전연결신경망 2층 입력, trainingNeuralX2Mat의 행 수만큼의 bias
 #pragma endregion
 
 #pragma region 역방향 계산에서 사용
@@ -93,6 +93,7 @@ public:
 
 	std::vector<double> lossAverages;
 	double loss = 0;
+	double correctAnswerRate = 0;
 	double learningRate = 0;
 	int nowEpoch = 0;
 
@@ -100,6 +101,7 @@ public:
 	int kernel1_Num = 0;
 	int kernel2_Num = 0;
 	int classification_Num = CLASSIFICATIONNUM;
+	int neuralW1Cols_Num = 10; //w1 행렬 얄(완전연결신경망 1층 뉴런 수)
 
 	enum class GD { STOCHASTIC, MINI_BATCH, BATCH };
 	GD gradientDescent = GD::BATCH;

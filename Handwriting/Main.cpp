@@ -45,17 +45,14 @@ int main() {
 	
 	//read MNIST iamge into OpenCV Mat vector
 	
-	//std::cout << "사용할 훈련 데이터 수를 입력해주세요." << std::endl;
-	//std::cin >> USEDATA_NUM;
-	//std::cout << "사용할 커널1 수를 입력해주세요." << std::endl;
-	//std::cin >> KERNEL1_NUM;
-	//std::cout << "사용할 커널2 수를 입력해주세요." << std::endl;
-	//std::cin >> KERNEL2_NUM;
+	
 	//op.PaintWindow(cv::Mat(), cv::Mat(), "Paint", cv::Size(560, 560), 13, NULL);
 
 	CNNMachine cnn;
 	bool loadModelYesOrNo;
 	int useDataNum = 0;
+	int kernel1Num = 0;
+	int kernel2Num = 0;
 	bool loadSucceed = false;
 
 	std::cout << "저장된 모델을 불러오시겠습니까? (Yes : 1, No : 0)" << std::endl;
@@ -66,10 +63,15 @@ int main() {
 		if(!loadSucceed)
 			std::cout << "저장된 모델 불러오기에 실패했습니다." << std::endl;
 	}
-	if(!loadModelYesOrNo || !loadSucceed){
+	if (!loadModelYesOrNo || !loadSucceed) {
 		std::cout << "사용할 전체 데이터셋 수를 입력해주세요." << std::endl;
 		std::cin >> useDataNum;
-		cnn.Init(&op, useDataNum, KERNEL1_NUM, KERNEL2_NUM, CLASSIFICATIONNUM);
+		std::cout << "사용할 커널1 수를 입력해주세요." << std::endl;
+		std::cin >> kernel1Num;
+		std::cout << "사용할 커널2 수를 입력해주세요." << std::endl;
+		std::cin >> kernel2Num;
+
+		cnn.Init(&op, useDataNum, kernel1Num, kernel2Num, CLASSIFICATIONNUM);
 	}
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;

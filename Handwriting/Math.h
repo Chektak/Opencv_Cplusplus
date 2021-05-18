@@ -39,5 +39,8 @@ namespace Math {
 
     //Àý´ñ°ª ¹ÝÈ¯
     double Absolute(double value);
-    //double SafeLog()
+
+    void OneHotEncoding(cv::InputArray _Input, cv::OutputArray _Output);
+    
+    double Clip(double min, double max, const double& _InputValue);
 };

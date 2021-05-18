@@ -5,13 +5,11 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 	this->learningRate = learningRate;
 	
 	lossAverages.push_back(0);
-	cv::namedWindow("Window", cv::WINDOW_NORMAL);
-	cv::imshow("Window", mnistImageMats[nowEpoch % mnistImageMats.size()]);
-	cv::resizeWindow("Window", cv::Size(28, 28) * 8);
+	cv::namedWindow("InputImage", cv::WINDOW_NORMAL);
+	cv::resizeWindow("InputImage", cv::Size(28, 28) * 8);
+	cv::moveWindow("InputImage", 0, 0);
 	//epoch가 0 이하로 입력되면 무한 반복
-	for (nowEpoch = 1; (epoch <= 0) ? true : nowEpoch <= epoch; nowEpoch++) {
-		cv::imshow("Window", mnistImageMats[nowEpoch % mnistImageMats.size()]);
-
+	for (nowEpoch; (epoch <= 0) ? true : nowEpoch <= epoch; nowEpoch++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
 		std::cout << nowEpoch << "번째 훈련" << std::endl;
 		std::cout << "[명령어 0 : Menu 열기 | 1 : Auto Training | 2 : Model Save 모델 저장 | 3 : Model Load 모델 불러오기" << std::endl;
@@ -28,6 +26,8 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 		if (KeyEvent(key) == false){
 			continue;
 		}
+
+		cv::imshow("InputImage", trainingMats[nowEpoch % trainingMats.size()]);
 
 		trainingTickMeter.reset();
 		trainingTickMeter.start();
@@ -80,7 +80,6 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 
 #pragma endregion
 #pragma region 모델 손실(cost) 계산
-		loss = 0;
 		//훈련 세트 손실
 		//for (int y = 0; y < trainingYMat.rows; y++) {
 		//	for (int x = 0; x < trainingYMat.cols; x++) {
@@ -99,14 +98,29 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 		//		loss += validationYMat.at<double>(y, x) * log((neuralYHatMat.at<double>(0, x) == 0) ? 0.00000000001 : neuralYHatMat.at<double>(0, x));
 		//	}
 		//}
-		for (int y = 0; y < validationYMat.rows; y++) {
-			ModelPredict(validationMats[y], validationNeuralYHatMat);
-			for (int x = 0; x < validationYMat.cols; x++) {
-				//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
-				loss += validationYMat.at<double>(y, x) * log((validationNeuralYHatMat.at<double>(0, x) == 0) ? 0.00000000001 : validationNeuralYHatMat.at<double>(0, x));
+
+		int correct = 0;
+		loss = 0;
+		cv::Mat oneHotEncodedMat;
+		for (int vi = 0; vi < validationMats.size(); vi++) {
+			ModelPredict(validationMats[vi], validationNeuralYHatMat);
+			Math::OneHotEncoding(validationNeuralYHatMat, oneHotEncodedMat);
+			if (oneHotEncodedMat.at<double>(0, validationLabels[vi]) == 1) {
+				correct++;
 			}
+			//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
+			loss += log(Math::Clip(0.00000000001, 1 - 0.00000000001, validationNeuralYHatMat.at<double>(0, validationLabels[vi])));
 		}
-		loss /= -validationYMat.rows;
+		correctAnswerRate = correct / validationLabels.size();
+
+		loss *= -1;
+		//데이터 수만큼 나누어 코스트 평균 계산
+		loss /= validationLabels.size();
+
+		std::cout << validationNeuralYHatMat << std::endl;
+		std::cout << oneHotEncodedMat << std::endl;
+		std::cout << validationLabels[validationLabels.size()-1] << std::endl;
+		
 
 		//테스트 세트 손실
 		//for (int y = 0; y < trainingYMat.rows; y++) {
@@ -117,9 +131,11 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 		//}
 		//loss /= -trainingYMat.rows;
 
-		lossAverages.push_back(lossAverages[(double)nowEpoch - 1] + loss / nowEpoch);
+		lossAverages.push_back(lossAverages[nowEpoch - (double)1] + loss / nowEpoch);
 		std::cout << "코스트 : " << loss << std::endl;
-		std::cout << "코스트 평균 : " << lossAverages[nowEpoch] << std::endl;
+		std::cout << "코스트 누적 평균 : " << lossAverages[nowEpoch] << std::endl;
+		std::cout << "정확도(max 100%) : " << correctAnswerRate << " %" << std::endl;
+		std::cout << "정확도(max 100%) : " << correct << " %" << std::endl;
 #pragma endregion
 		trainingTickMeter.stop();
 	}
@@ -135,6 +151,9 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 	std::cout << "데이터셋 분할 비율 : " << trainingSetRatio << "+" << validationSetRatio << "+" << testSetRatio << "+" << std::endl;
 	std::cout << "데이터셋 분할 후 크기 계산 결과 : \n 전체 데이터 셋 크기 : " << mnistImageMats.size() << std::endl;
 	std::cout << "\t" << trainingSetSize << "+" << validationSetSize << "+" << testSetSize << "+" << std::endl;
+
+	trainingYMat = cv::Mat::zeros(cv::Size(classification_Num, trainingSetSize), CV_64FC1);
+	trainingNeuralYHatMat.create(cv::Size(classification_Num, trainingSetSize), CV_64FC1);
 	for (int i = 0; i < trainingSetSize; i++) {
 		trainingMats.push_back(cv::Mat());
 		trainingConv1x1ZeroPaddingMats.push_back(cv::Mat_<double>());
@@ -143,7 +162,11 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 		mnistImageMats[i].convertTo(trainingMats[i], CV_64FC1);
 		//평균을 계산해 간단한 특성 스케일 정규화
 		trainingMats[i] /= 255;
+
+		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
+		trainingYMat.at<double>(i, mnistImageLabels[i]) = 1;
 	}
+	validationNeuralYHatMat.create(cv::Size(classification_Num, validationSetSize), CV_64FC1);
 	for (int i = trainingSetSize; i < trainingSetSize + validationSetSize; i++) {
 		validationMats.push_back(cv::Mat());
 
@@ -151,7 +174,11 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 		mnistImageMats[i].convertTo(validationMats[i - (double)trainingSetSize], CV_64FC1);
 		//평균을 계산해 간단한 특성 스케일 정규화
 		validationMats[i - (double)trainingSetSize] /= 255;
+
+		//검증 세트 범위에 해당하는 이미지 라벨 저장 
+		validationLabels.push_back((int)mnistImageLabels[i - (double)trainingSetSize]);
 	}
+	testNeuralYHatMat.create(cv::Size(classification_Num, testSetSize), CV_64FC1);
 	for (int i = trainingSetSize + validationSetSize; i < trainingSetSize + validationSetSize + testSetSize; i++) {
 		testMats.push_back(cv::Mat());
 
@@ -159,29 +186,9 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 		mnistImageMats[i].convertTo(testMats[i - ((double)trainingSetSize + validationSetSize)], CV_64FC1);
 		//평균을 계산해 간단한 특성 스케일 정규화
 		testMats[i - ((double)trainingSetSize + validationSetSize)] /= 255;
-	}
 
-#pragma region 정답 데이터 행렬과 가설 행렬 초기화
-	//정답 데이터를 벡터로 변환한다.
-	trainingYMat = cv::Mat::zeros(cv::Size(classification_Num, trainingSetSize), CV_64FC1);
-	for (int y = 0; y < trainingSetSize; y++) {
-		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
-		trainingYMat.at<double>(y, mnistImageLabels[y]) = 1;
+		testLabels.push_back((int)mnistImageLabels[i - ((double)validationSetSize + trainingSetSize)]);
 	}
-	trainingNeuralYHatMat.create(cv::Size(classification_Num, trainingSetSize), CV_64FC1);
-	validationYMat = cv::Mat::zeros(cv::Size(classification_Num, validationSetSize), CV_64FC1);
-	std::cout << validationYMat.size << std::endl;
-	for (int y = trainingSetSize; y < trainingSetSize + validationSetSize; y++) {
-		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
-		validationYMat.at<double>(y - trainingSetSize, (int)mnistImageLabels[y]) = 1;
-	}
-	validationNeuralYHatMat.create(cv::Size(classification_Num, validationSetSize), CV_64FC1);
-	testYMat = cv::Mat::zeros(cv::Size(classification_Num, testSetSize), CV_64FC1);
-	for (int y = validationSetSize + trainingSetSize; y < trainingSetSize + validationSetSize + testSetSize; y++) {
-		//열과 맞는다면 true(1), 아니라면 false(0)를 저장
-		testYMat.at<double>(y - (validationSetSize + trainingSetSize), mnistImageLabels[y]) = 1;
-	}
-	testNeuralYHatMat.create(cv::Size(classification_Num, testSetSize), CV_64FC1);
 #pragma endregion
 }
 
@@ -210,7 +217,7 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 		kernels1[0].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 		conv1ResultBiases[0].push_back(0);
 
-		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(2));
+		gen.fill(kernels1[0][k1i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(2));
 
 		kernels2.push_back(std::vector<cv::Mat>());
 		conv2ResultBiases.push_back(std::vector<double>());
@@ -220,7 +227,7 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 			kernels2[k1i].push_back(cv::Mat(cv::Size(3, 3), CV_64FC1));
 			conv2ResultBiases[k1i].push_back(0);
 
-			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(1), cv::Scalar(2));
+			gen.fill(kernels2[k1i][k2i], cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 		}
 	}
 	kernel1Stride = cv::Size(1, 1);
@@ -232,10 +239,10 @@ void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int 
 		wHeight = (wHeight - poolSize.height) / poolStride.height + 1;
 	int wWidth = (trainingMats[0].cols - poolSize.width) / poolStride.width + 1;
 		wWidth = (wWidth - poolSize.width) / poolStride.width + 1;
-	neuralW1Mat.create(cv::Size(10, wHeight * wWidth * kernel2_Num), CV_64FC1);
+	neuralW1Mat.create(cv::Size(neuralW1Cols_Num, wHeight * wWidth * kernel2_Num), CV_64FC1);
 	gen.fill(neuralW1Mat, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
-	neuralW2.create(cv::Size(classification_Num, neuralW1Mat.cols), CV_64FC1);
-	gen.fill(neuralW2, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
+	neuralW2Mat.create(cv::Size(classification_Num, neuralW1Cols_Num), CV_64FC1);
+	gen.fill(neuralW2Mat, cv::RNG::UNIFORM, cv::Scalar(0), cv::Scalar(1));
 
 	
 #pragma endregion
@@ -331,147 +338,147 @@ void CNNMachine::ForwardPropagationStochastic(int trainingIndex)
 
 void CNNMachine::BackPropagationStochastic(int trainingIndex)
 {
-	//yLoss = -(trainingYMat - trainingNeuralYHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
-	yLoss = trainingNeuralYHatMat - trainingYMat; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
-	w2T = neuralW2.t();
-	yLossW2 = yLoss * w2T; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
-
-	//std::cout << "yLossW2\n" << yLossW2 <<std::endl;
-	//Relu(trainingNeuralX2)과 벡터곱
-	//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
-	//Math::Relu(trainingNeuralX2, trainingNeuralX2);
-	yLossW2Relu3 = yLossW2.mul(trainingNeuralX2); //손실함수를 완전연결층1 결과에 대해 미분한 값
-
-	//std::cout << "Relu(trainingNeuralX2)\n" << trainingNeuralX2 << std::endl;
-	//std::cout << "Relu(trainingNeuralX2)과 벡터곱\n" << yLossW2Relu3 << std::endl;
-	yLossW2Relu3W1 = yLossW2Relu3 * neuralW1Mat.t();
-
-	//yLossW2Relu3W1를 합성곱층 결과 크기로 차원 변환, 풀링2 필터로 Up-Sampleling, Relu(Conv2)행렬과 벡터곱
-	int shuffledIndex = trainingIndex;
-	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
-		//Pooling 함수 역방향 계산으로 풀링 필터 할당
-		Math::GetMaxPoolingFilter(trainingConv2ResultZeroPadMats[shuffledIndex][k2n], pool2BackpropFilters[shuffledIndex][k2n], trainingPool2Result[shuffledIndex][k2n], poolSize, poolStride);
-		//풀링 필터로 업샘플링
-		cv::Mat sample = yLossW2Relu3W1.row(shuffledIndex).reshape(1, trainingPool2Result[0].size()).row(k2n).reshape(1, trainingPool2Result[0][0].rows);
-		Math::MaxPoolingBackprop(sample, yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], pool2BackpropFilters[shuffledIndex][k2n], poolSize, poolStride);
-
-		//Relu 함수 역방향 계산
-		//Up-Sampleling 결과 행렬과 Relu(Conv2)행렬을 벡터곱
-		yLossW2Relu3W1UpRelu2[shuffledIndex][k2n] = yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].mul(trainingConv2ResultMats[shuffledIndex][k2n]);
-
-	}
-	//std::cout << "yLossW2Relu3W1UpRelu2[0][0]\n" << yLossW2Relu3W1UpRelu2[0][0] << std::endl;
-
-	//커널2 역방향 계산을 위한 합성곱2 필터 계산
-	Math::GetConvBackpropFilters(trainingPool1Result[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
-	//커널1 역방향 계산을 위한 합성곱1 필터 계산
-	Math::GetConvBackpropFilters(trainingMats[0], &conv1BackpropFilters, kernels1[0][0], kernel1Stride);
-
-#pragma region 합성곱층1 가중치 행렬(커널1), 편향 역방향 계산
-	//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱하고, 풀링1 필터로 Up-Sampleling 후 Relu(Conv1)행렬과 벡터곱
-	//커널 1 개수만큼 반복
-	for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
-		cv::Mat yLossW2Relu3W1UpRelu2P1 = cv::Mat(yLossW2Relu3W1UpRelu2[shuffledIndex][0].size(), CV_64FC1);
-		yLossW2Relu3W1UpRelu2P1.setTo(0);
-
-		//커널 2 개수만큼 반복
-		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
-			cv::Mat conv2XBackprop;
-			//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱
-			Math::ConvXBackprop(yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], kernels2[k1n][k2n], conv2XBackprop, conv2BackpropFilters, kernel1Stride);
-			yLossW2Relu3W1UpRelu2P1 += yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].mul(conv2XBackprop);
-		}
-		//평균 계산으로 특성 스케일 정규화
-		yLossW2Relu3W1UpRelu2P1 /= kernels2[0].size();
-
-		//Pooling 함수 역방향 계산으로 풀링 필터 정의
-		Math::GetMaxPoolingFilter(trainingConv1ResultZeroPadMats[shuffledIndex][k1n], pool1BackpropFilters[shuffledIndex][k1n], trainingPool1Result[shuffledIndex][k1n], poolSize, poolStride);
-		//풀링 필터로 업샘플링
-		Math::MaxPoolingBackprop(yLossW2Relu3W1UpRelu2P1, yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n], pool1BackpropFilters[shuffledIndex][k1n], poolSize, poolStride);
-
-		//Relu 함수 역방향 계산
-		//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
-		//Math::Relu(trainingConv1ResultMats[shuffledIndex][k1n], trainingConv1ResultMats[shuffledIndex][k1n]);
-		yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n] = yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n].mul(trainingConv1ResultMats[shuffledIndex][k1n]);
-	}
-
-	for (int k1c = 0; k1c < kernels1.size(); k1c++) {
-		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
-			cv::Mat conv1KBackprops = cv::Mat::zeros(kernels1[0][0].size(), CV_64FC1);
-			double conv1BiasBackprop = 0;
-
-			cv::Mat conv1KBackpropTemp;
-			Math::ConvKBackprop(yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n], trainingConv1x1ZeroPaddingMats[shuffledIndex], kernels1[0][0].size(), conv1KBackpropTemp, conv1BackpropFilters, kernel1Stride);
-			conv1KBackprops += conv1KBackpropTemp;
-
-			for (int bY = 0; bY < trainingConv1ResultMats[0][0].rows; bY++) {
-				for (int bX = 0; bX < trainingConv1ResultMats[0][0].cols; bX++) {
-					conv1BiasBackprop += yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n].at<double>(bY, bX);
-				}
-			}
-			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
-			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / ((double)trainingConv1ResultMats[0][0].rows * trainingConv1ResultMats[0][0].cols * trainingMats.size());
-
-			kernels1[k1c][k1n] -= learningRate * conv1KBackprops / trainingMats.size();
-		}
-	}
-	//정규화
-	/*for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
-		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
-			kernels1[k1c][k1n] /= trainingMats.size();
-		}
-	}*/
-
-#pragma endregion
-
-#pragma region 합성곱층2 가중치 행렬(커널2), 편향 역방향 계산
-	for (int k2c = 0; k2c < kernels2.size(); k2c++) {
-		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
-			cv::Mat conv2KBackprops = cv::Mat::zeros(kernels2[0][0].size(), CV_64FC1);
-			double conv2BiasBackprop = 0;
-
-			cv::Mat conv2KBackpropTemp;
-			Math::ConvKBackprop(yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], trainingPool1ResultZeroPadding[shuffledIndex][k2c], kernels2[0][0].size(), conv2KBackpropTemp, conv2BackpropFilters, kernel2Stride);
-			conv2KBackprops += conv2KBackpropTemp;
-
-			for (int bY = 0; bY < trainingConv2ResultMats[0][0].rows; bY++) {
-				for (int bX = 0; bX < trainingConv2ResultMats[0][0].cols; bX++) {
-					conv2BiasBackprop += yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].at<double>(bY, bX);
-				}
-			}
-			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
-			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / ((double)trainingConv2ResultMats[0][0].rows * trainingConv2ResultMats[0][0].cols * trainingMats.size());
-			kernels2[k2c][k2n] -= learningRate * conv2KBackprops / trainingMats.size();
-		}
-	}
-	//정규화
-	/*for (int k2n = 0; k2n < kernels1[0].size(); k2n++) {
-		for (int k2c = 0; k2c < kernels1.size(); k2c++) {
-			kernels2[k2c][k2n] /= trainingMats.size();
-		}
-	}*/
-
-#pragma endregion
-
-#pragma region 완전연결신경망층 가중치 행렬, 편향 역방향 계산
-	neuralW1Mat -= learningRate * trainingNeuralX1Mat.t() * (yLossW2Relu3) / yLossW2Relu3.rows;//평균을 계산해 간단한 특성 스케일 정규화
-	for (int y = 0; y < yLossW2Relu3.rows; y++) {
-		double bias1Backprop = 0;
-		for (int x = 0; x < yLossW2Relu3.cols; x++) {
-			bias1Backprop += yLossW2Relu3.at<double>(y, x);
-		}
-		neuralBiases1[y] -= learningRate * bias1Backprop / yLossW2Relu3.cols;
-	}
-
-	neuralW2 -= learningRate * (trainingNeuralX2.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 정규화
-	for (int y = 0; y < yLoss.rows; y++) {
-		double bias2Backprop = 0;
-		for (int x = 0; x < yLoss.cols; x++) {
-			bias2Backprop += yLoss.at<double>(y, x);
-		}
-		neuralBiases2[y] -= learningRate * bias2Backprop / yLoss.cols;
-	}
-#pragma endregion
+//	//yLoss = -(trainingYMat - trainingNeuralYHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+//	yLoss = trainingNeuralYHatMat - trainingYMat; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
+//	w2T = neuralW2Mat.t();
+//	yLossW2 = yLoss * w2T; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
+//
+//	//std::cout << "yLossW2\n" << yLossW2 <<std::endl;
+//	//Relu(trainingNeuralX2Mat)과 벡터곱
+//	//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
+//	//Math::Relu(trainingNeuralX2Mat, trainingNeuralX2Mat);
+//	yLossW2Relu3 = yLossW2.mul(trainingNeuralX2Mat); //손실함수를 완전연결층1 결과에 대해 미분한 값
+//
+//	//std::cout << "Relu(trainingNeuralX2Mat)\n" << trainingNeuralX2Mat << std::endl;
+//	//std::cout << "Relu(trainingNeuralX2Mat)과 벡터곱\n" << yLossW2Relu3 << std::endl;
+//	yLossW2Relu3W1 = yLossW2Relu3 * neuralW1Mat.t();
+//
+//	//yLossW2Relu3W1를 합성곱층 결과 크기로 차원 변환, 풀링2 필터로 Up-Sampleling, Relu(Conv2)행렬과 벡터곱
+//	int shuffledIndex = trainingIndex;
+//	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+//		//Pooling 함수 역방향 계산으로 풀링 필터 할당
+//		Math::GetMaxPoolingFilter(trainingConv2ResultZeroPadMats[shuffledIndex][k2n], pool2BackpropFilters[shuffledIndex][k2n], trainingPool2Result[shuffledIndex][k2n], poolSize, poolStride);
+//		//풀링 필터로 업샘플링
+//		cv::Mat sample = yLossW2Relu3W1.row(shuffledIndex).reshape(1, trainingPool2Result[0].size()).row(k2n).reshape(1, trainingPool2Result[0][0].rows);
+//		Math::MaxPoolingBackprop(sample, yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], pool2BackpropFilters[shuffledIndex][k2n], poolSize, poolStride);
+//
+//		//Relu 함수 역방향 계산
+//		//Up-Sampleling 결과 행렬과 Relu(Conv2)행렬을 벡터곱
+//		yLossW2Relu3W1UpRelu2[shuffledIndex][k2n] = yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].mul(trainingConv2ResultMats[shuffledIndex][k2n]);
+//
+//	}
+//	//std::cout << "yLossW2Relu3W1UpRelu2[0][0]\n" << yLossW2Relu3W1UpRelu2[0][0] << std::endl;
+//
+//	//커널2 역방향 계산을 위한 합성곱2 필터 계산
+//	Math::GetConvBackpropFilters(trainingPool1Result[0][0], &conv2BackpropFilters, kernels2[0][0], kernel2Stride);
+//	//커널1 역방향 계산을 위한 합성곱1 필터 계산
+//	Math::GetConvBackpropFilters(trainingMats[0], &conv1BackpropFilters, kernels1[0][0], kernel1Stride);
+//
+//#pragma region 합성곱층1 가중치 행렬(커널1), 편향 역방향 계산
+//	//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱하고, 풀링1 필터로 Up-Sampleling 후 Relu(Conv1)행렬과 벡터곱
+//	//커널 1 개수만큼 반복
+//	for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+//		cv::Mat yLossW2Relu3W1UpRelu2P1 = cv::Mat(yLossW2Relu3W1UpRelu2[shuffledIndex][0].size(), CV_64FC1);
+//		yLossW2Relu3W1UpRelu2P1.setTo(0);
+//
+//		//커널 2 개수만큼 반복
+//		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
+//			cv::Mat conv2XBackprop;
+//			//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱
+//			Math::ConvXBackprop(yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], kernels2[k1n][k2n], conv2XBackprop, conv2BackpropFilters, kernel1Stride);
+//			yLossW2Relu3W1UpRelu2P1 += yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].mul(conv2XBackprop);
+//		}
+//		//평균 계산으로 특성 스케일 정규화
+//		yLossW2Relu3W1UpRelu2P1 /= kernels2[0].size();
+//
+//		//Pooling 함수 역방향 계산으로 풀링 필터 정의
+//		Math::GetMaxPoolingFilter(trainingConv1ResultZeroPadMats[shuffledIndex][k1n], pool1BackpropFilters[shuffledIndex][k1n], trainingPool1Result[shuffledIndex][k1n], poolSize, poolStride);
+//		//풀링 필터로 업샘플링
+//		Math::MaxPoolingBackprop(yLossW2Relu3W1UpRelu2P1, yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n], pool1BackpropFilters[shuffledIndex][k1n], poolSize, poolStride);
+//
+//		//Relu 함수 역방향 계산
+//		//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
+//		//Math::Relu(trainingConv1ResultMats[shuffledIndex][k1n], trainingConv1ResultMats[shuffledIndex][k1n]);
+//		yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n] = yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n].mul(trainingConv1ResultMats[shuffledIndex][k1n]);
+//	}
+//
+//	for (int k1c = 0; k1c < kernels1.size(); k1c++) {
+//		for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+//			cv::Mat conv1KBackprops = cv::Mat::zeros(kernels1[0][0].size(), CV_64FC1);
+//			double conv1BiasBackprop = 0;
+//
+//			cv::Mat conv1KBackpropTemp;
+//			Math::ConvKBackprop(yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n], trainingConv1x1ZeroPaddingMats[shuffledIndex], kernels1[0][0].size(), conv1KBackpropTemp, conv1BackpropFilters, kernel1Stride);
+//			conv1KBackprops += conv1KBackpropTemp;
+//
+//			for (int bY = 0; bY < trainingConv1ResultMats[0][0].rows; bY++) {
+//				for (int bX = 0; bX < trainingConv1ResultMats[0][0].cols; bX++) {
+//					conv1BiasBackprop += yLossW2Relu3W1UpRelu2P1UpRelu[shuffledIndex][k1n].at<double>(bY, bX);
+//				}
+//			}
+//			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
+//			conv1ResultBiases[k1c][k1n] -= learningRate * conv1BiasBackprop / ((double)trainingConv1ResultMats[0][0].rows * trainingConv1ResultMats[0][0].cols * trainingMats.size());
+//
+//			kernels1[k1c][k1n] -= learningRate * conv1KBackprops / trainingMats.size();
+//		}
+//	}
+//	//정규화
+//	/*for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
+//		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
+//			kernels1[k1c][k1n] /= trainingMats.size();
+//		}
+//	}*/
+//
+//#pragma endregion
+//
+//#pragma region 합성곱층2 가중치 행렬(커널2), 편향 역방향 계산
+//	for (int k2c = 0; k2c < kernels2.size(); k2c++) {
+//		for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
+//			cv::Mat conv2KBackprops = cv::Mat::zeros(kernels2[0][0].size(), CV_64FC1);
+//			double conv2BiasBackprop = 0;
+//
+//			cv::Mat conv2KBackpropTemp;
+//			Math::ConvKBackprop(yLossW2Relu3W1UpRelu2[shuffledIndex][k2n], trainingPool1ResultZeroPadding[shuffledIndex][k2c], kernels2[0][0].size(), conv2KBackpropTemp, conv2BackpropFilters, kernel2Stride);
+//			conv2KBackprops += conv2KBackpropTemp;
+//
+//			for (int bY = 0; bY < trainingConv2ResultMats[0][0].rows; bY++) {
+//				for (int bX = 0; bX < trainingConv2ResultMats[0][0].cols; bX++) {
+//					conv2BiasBackprop += yLossW2Relu3W1UpRelu2[shuffledIndex][k2n].at<double>(bY, bX);
+//				}
+//			}
+//			//행렬 요소를 전부 더한 후, 요소 갯수만큼 나눈다. 특성 스케일 정규화 후 편향을 업데이트
+//			conv2ResultBiases[k2c][k2n] -= learningRate * conv2BiasBackprop / ((double)trainingConv2ResultMats[0][0].rows * trainingConv2ResultMats[0][0].cols * trainingMats.size());
+//			kernels2[k2c][k2n] -= learningRate * conv2KBackprops / trainingMats.size();
+//		}
+//	}
+//	//정규화
+//	/*for (int k2n = 0; k2n < kernels1[0].size(); k2n++) {
+//		for (int k2c = 0; k2c < kernels1.size(); k2c++) {
+//			kernels2[k2c][k2n] /= trainingMats.size();
+//		}
+//	}*/
+//
+//#pragma endregion
+//
+//#pragma region 완전연결신경망층 가중치 행렬, 편향 역방향 계산
+//	neuralW1Mat -= learningRate * trainingNeuralX1Mat.t() * (yLossW2Relu3) / yLossW2Relu3.rows;//평균을 계산해 간단한 특성 스케일 정규화
+//	for (int y = 0; y < yLossW2Relu3.rows; y++) {
+//		double bias1Backprop = 0;
+//		for (int x = 0; x < yLossW2Relu3.cols; x++) {
+//			bias1Backprop += yLossW2Relu3.at<double>(y, x);
+//		}
+//		neuralBiases1[y] -= learningRate * bias1Backprop / yLossW2Relu3.cols;
+//	}
+//
+//	neuralW2Mat -= learningRate * (trainingNeuralX2Mat.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 정규화
+//	for (int y = 0; y < yLoss.rows; y++) {
+//		double bias2Backprop = 0;
+//		for (int x = 0; x < yLoss.cols; x++) {
+//			bias2Backprop += yLoss.at<double>(y, x);
+//		}
+//		neuralBiases2[y] -= learningRate * bias2Backprop / yLoss.cols;
+//	}
+//#pragma endregion
 }
 
 void CNNMachine::ForwardPropagationMiniBatch(int miniBatchIndex)
@@ -506,14 +513,11 @@ void CNNMachine::ForwardPropagationBatch()
 		/*합성곱층 1의 (행:데이터 수, 열:채널 수)의 이미지을 가진 trainingPool1Result행렬과
 		합성곱층 2의 kernel2행렬을 행렬곱하듯 연결*/
 		for (int k2n = 0; k2n < kernel2_Num; k2n++) {
-			//double conv2ResultBiasesSum = 0;
 			for (int k1n = 0; k1n < kernel1_Num; k1n++) {
 				Math::Convolution(trainingPool1ResultZeroPadding[x1i][k1n], trainingConv2ResultMats[x1i][k2n], trainingPool1ResultSize, kernels2[k1n][k2n], kernel2Stride);
-				//conv2ResultBiasesSum += conv2ResultBiases[k1n][k2n];
 				trainingConv2ResultMats[x1i][k2n] += conv2ResultBiases[k1n][k2n];
 				
 			}
-			//trainingConv2ResultMats[x1i][k2n] += conv2ResultBiasesSum / kernel1_Num;
 			Math::Relu(trainingConv2ResultMats[x1i][k2n], trainingConv2ResultMats[x1i][k2n]);
 			Math::CreateZeroPadding(trainingConv2ResultMats[x1i][k2n], trainingConv2ResultZeroPadMats[x1i][k2n], trainingPool2ResultSize, poolSize, poolStride);
 			Math::MaxPooling(trainingConv2ResultZeroPadMats[x1i][k2n], trainingPool2Result[x1i][k2n], poolSize, poolStride);
@@ -539,39 +543,58 @@ void CNNMachine::ForwardPropagationBatch()
 		cv::Mat Sample(1, tempArr[0].size(), CV_64FC1, tempArr[i].data());
 		trainingNeuralX1Mat.push_back(Sample);
 	}
-	Math::NeuralNetwork(trainingNeuralX1Mat, trainingNeuralX2, neuralW1Mat);
-	//trainingNeuralX2 /= trainingNeuralX1Mat.cols;//특성 스케일 정규화
-	for (int a1i = 0; a1i < trainingNeuralX2.rows; a1i++) {
-		trainingNeuralX2.row(a1i) += neuralBiases1[a1i];
+	Math::NeuralNetwork(trainingNeuralX1Mat, trainingNeuralX2Mat, neuralW1Mat);
+	//trainingNeuralX2Mat /= trainingNeuralX1Mat.cols;//특성 스케일 정규화
+	for (int a1i = 0; a1i < trainingNeuralX2Mat.rows; a1i++) {
+		trainingNeuralX2Mat.row(a1i) += neuralBiases1[a1i];
 	}
 
-	Math::Relu(trainingNeuralX2, trainingNeuralX2);
+	Math::Relu(trainingNeuralX2Mat, trainingNeuralX2Mat);
 
-	Math::NeuralNetwork(trainingNeuralX2, trainingNeuralYHatMat, neuralW2);
-	//trainingNeuralYHatMat /= trainingNeuralX2.cols;//특성 스케일 정규화
+	Math::NeuralNetwork(trainingNeuralX2Mat, trainingNeuralYHatMat, neuralW2Mat);
+	//trainingNeuralYHatMat /= trainingNeuralX2Mat.cols;//특성 스케일 정규화
 
 	for (int yHati = 0; yHati < trainingNeuralYHatMat.rows; yHati++) {
 		trainingNeuralYHatMat.row(yHati) += neuralBiases2[yHati];
 	}
 	Math::SoftMax(trainingNeuralYHatMat, trainingNeuralYHatMat);
+
+
+
+
+	//디버그용 이미지 출력
+	const int printk1Cols = 5;
+	const int printk2Cols = 5;
+	for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+		cv::namedWindow(cv::String("Pooled1Image ").append(std::to_string(k1n)), cv::WINDOW_KEEPRATIO);
+		cv::resizeWindow(cv::String("Pooled1Image ").append(std::to_string(k1n)), cv::Size(7, 7) * 8);
+		cv::moveWindow(cv::String("Pooled1Image ").append(std::to_string(k1n)), k1n * (7 * 12) - (int)(k1n / printk1Cols) * printk1Cols * (7 * 12), 300 + (int)(k1n / printk1Cols) * 75);
+		cv::imshow(cv::String("Pooled1Image ").append(std::to_string(k1n)), trainingPool1Result[nowEpoch % trainingPool1Result.size()][k1n]);
+	}
+	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+		cv::namedWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), cv::WINDOW_KEEPRATIO);
+		cv::resizeWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), cv::Size(7, 7) * 8);
+		cv::moveWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), k2n * (7 * 12) - (int)(k2n / printk2Cols) * printk2Cols * (7 * 12), 450 + (int)(k2n / printk2Cols) * 75);
+		cv::imshow(cv::String("Pooled2Image").append(std::to_string(k2n)), trainingPool2Result[nowEpoch % trainingPool1Result.size()][k2n]);
+	}
 }
 
 void CNNMachine::BackPropagationBatch()
 {
 	//yLoss = -(trainingYMat - trainingNeuralYHatMat); //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	yLoss = trainingNeuralYHatMat - trainingYMat; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
-	w2T = neuralW2.t();
-	yLossW2 = yLoss*w2T; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
+	w2T = neuralW2Mat.t();
+	yLossW2 = yLoss*w2T / yLoss.cols; //손실 함수를 완전연결층2 입력(ReLu(aMat))에 대해 미분한 값
 	
 	//std::cout << "yLossW2\n" << yLossW2 <<std::endl;
-	//Relu(trainingNeuralX2)과 벡터곱
+	//Relu(trainingNeuralX2Mat)과 벡터곱
 	//(정방향 계산에서 이미 ReLU를 적용했으므로 생략)
-	//Math::Relu(trainingNeuralX2, trainingNeuralX2);
-	yLossW2Relu3 = yLossW2.mul(trainingNeuralX2); //손실함수를 완전연결층1 결과에 대해 미분한 값
+	//Math::Relu(trainingNeuralX2Mat, trainingNeuralX2Mat);
+	yLossW2Relu3 = yLossW2.mul(trainingNeuralX2Mat); //손실함수를 완전연결층1 결과에 대해 미분한 값
 	
-	//std::cout << "Relu(trainingNeuralX2)\n" << trainingNeuralX2 << std::endl;
-	//std::cout << "Relu(trainingNeuralX2)과 벡터곱\n" << yLossW2Relu3 << std::endl;
-	yLossW2Relu3W1 = yLossW2Relu3 * neuralW1Mat.t();
+	//std::cout << "Relu(trainingNeuralX2Mat)\n" << trainingNeuralX2Mat << std::endl;
+	//std::cout << "Relu(trainingNeuralX2Mat)과 벡터곱\n" << yLossW2Relu3 << std::endl;
+	yLossW2Relu3W1 = yLossW2Relu3 * neuralW1Mat.t() / yLossW2Relu3.cols;
 
 	//yLossW2Relu3W1를 합성곱층 결과 크기로 차원 변환, 풀링2 필터로 Up-Sampleling, Relu(Conv2)행렬과 벡터곱
 	for (int x1i = 0; x1i < trainingMats.size(); x1i++) {
@@ -606,7 +629,7 @@ void CNNMachine::BackPropagationBatch()
 			for (int k2n = 0; k2n < kernels2[0].size(); k2n++) {
 				cv::Mat conv2XBackprop;
 				//yLossW2Relu3W1UpRelu2행렬과 합성곱2 함수의 커널2에 대한 미분 행렬을 벡터곱
-				Math::ConvXBackprop(yLossW2Relu3W1UpRelu2[x1i][k2n], kernels2[k1n][k2n], conv2XBackprop, conv2BackpropFilters, kernel1Stride);
+				Math::ConvXBackprop(yLossW2Relu3W1UpRelu2[x1i][k2n], kernels2[k1n][k2n], conv2XBackprop, conv2BackpropFilters, kernel2Stride);
 				yLossW2Relu3W1UpRelu2P1 += yLossW2Relu3W1UpRelu2[x1i][k2n].mul(conv2XBackprop);
 			}
 			//평균 계산으로 특성 스케일 정규화
@@ -646,12 +669,6 @@ void CNNMachine::BackPropagationBatch()
 			kernels1[k1c][k1n] -= learningRate * conv1KBackprops / trainingMats.size();
 		}
 	}
-	//정규화
-	/*for (int k1n = 0; k1n < kernels1[0].size(); k1n++) {
-		for (int k1c = 0; k1c < kernels1.size(); k1c++) {
-			kernels1[k1c][k1n] /= trainingMats.size();
-		}
-	}*/
 
 #pragma endregion
 
@@ -677,12 +694,6 @@ void CNNMachine::BackPropagationBatch()
 			kernels2[k2c][k2n] -= learningRate * conv2KBackprops / trainingMats.size();
 		}
 	}
-	//정규화
-	/*for (int k2n = 0; k2n < kernels1[0].size(); k2n++) {
-		for (int k2c = 0; k2c < kernels1.size(); k2c++) {
-			kernels2[k2c][k2n] /= trainingMats.size();
-		}
-	}*/
 
 #pragma endregion
 
@@ -696,7 +707,7 @@ void CNNMachine::BackPropagationBatch()
 		neuralBiases1[y] -= learningRate * bias1Backprop / yLossW2Relu3.cols;
 	}
 	
-	neuralW2 -= learningRate * (trainingNeuralX2.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 정규화
+	neuralW2Mat -= learningRate * (trainingNeuralX2Mat.t() * (yLoss)) / yLoss.rows;//평균을 계산해 간단한 특성 스케일 정규화
 	for (int y = 0; y < yLoss.rows; y++) {
 		double bias2Backprop = 0;
 		for (int x = 0; x < yLoss.cols; x++) {
@@ -777,7 +788,7 @@ void CNNMachine::ModelPredict(cv::InputArray _Input, cv::OutputArray _NeuralYHat
 
 	Math::Relu(predictNeuralX2Mat, predictNeuralX2Mat);
 
-	Math::NeuralNetwork(predictNeuralX2Mat, predictNeuralYHatMat, neuralW2);
+	Math::NeuralNetwork(predictNeuralX2Mat, predictNeuralYHatMat, neuralW2Mat);
 
 	//std::cout << predictNeuralYHatMat << std::endl;
 	double neuralBiases2Temp = 0;
@@ -789,8 +800,9 @@ void CNNMachine::ModelPredict(cv::InputArray _Input, cv::OutputArray _NeuralYHat
 
 	Math::SoftMax(predictNeuralYHatMat, predictNeuralYHatMat);
 
-	
 	predictNeuralYHatMat.copyTo(_NeuralYHatMatOutput);
+
+	
 }
 
 bool CNNMachine::SaveModel(cv::String fileName)
@@ -803,8 +815,8 @@ bool CNNMachine::SaveModel(cv::String fileName)
 	}
 	fs << "LearningRate"		<< learningRate;
 	fs << "loss"				<< loss;
-	fs << "lossAverages"		<< lossAverages;
-	fs << "NowEpoch"			<< nowEpoch;
+	fs << "lossAverages"				<< lossAverages;
+	fs << "nowEpoch"			<< nowEpoch;
 	fs << "USEDATA_NUM"			<< useData_Num;
 	fs << "KERNEL1_NUM"			<< kernel1_Num;
 	fs << "KERNEL2_NUM"			<< kernel2_Num;
@@ -821,10 +833,12 @@ bool CNNMachine::SaveModel(cv::String fileName)
 	fs << "Kernels2"			<< kernels2;
 	fs << "Conv1Bias"			<< conv1ResultBiases;
 	fs << "Conv2Bias"			<< conv2ResultBiases;
-	fs << "neuralW1Mat"				<< neuralW1Mat;
-	fs << "neuralW2"				<< neuralW2;
-	fs << "Bias1"				<< neuralBiases1;
-	fs << "Bias2"				<< neuralBiases2;
+	fs << "NeuralW1Mat"				<< neuralW1Mat;
+	fs << "NeuralW2Mat"				<< neuralW2Mat;
+	fs << "NeuralBias1"				<< neuralBiases1;
+	fs << "NeuralBias2"				<< neuralBiases2;
+
+	fs << "correctAnswerRate" << correctAnswerRate;
 
 	std::cout << "Model Save Completed!!!" << std::endl;
 	fs.release();
@@ -843,11 +857,13 @@ bool CNNMachine::LoadModel(cv::String fileName)
 
 	fs["LearningRate"]		>> learningRate;
 	fs["loss"]				>> loss;
-	fs["NowEpoch"]			>> nowEpoch;
+	fs["correctAnswerRate"] >> correctAnswerRate;
+	fs["nowEpoch"]			>> nowEpoch;
 	fs["USEDATA_NUM"]		>> useData_Num;
 	fs["KERNEL1_NUM"]		>> kernel1_Num;
 	fs["KERNEL2_NUM"]		>> kernel2_Num;
 	fs["CLASSIFICATION_NUM"]>> classification_Num;
+	fs["neuralW1Cols_Num"]  >> neuralW1Cols_Num;
 	fs["L1"]				>> 0;
 	fs["L2"]				>> 0;
 	fs["GradientDescent"]	>> gradientDescent;
@@ -863,10 +879,10 @@ bool CNNMachine::LoadModel(cv::String fileName)
 	fs["Kernels2"]			>> kernels2;
 	fs["Conv1Bias"]			>> conv1ResultBiases;
 	fs["Conv2Bias"]			>> conv2ResultBiases;
-	fs["neuralW1Mat"]				>> neuralW1Mat;
-	fs["neuralW2"]				>> neuralW2;
-	fs["Bias1"]				>> neuralBiases1;
-	fs["Bias2"]				>> neuralBiases2;
+	fs["NeuralW1Mat"]		>> neuralW1Mat;
+	fs["NeuralW2Mat"]		>> neuralW2Mat;
+	fs["NeuralBias1"]		>> neuralBiases1;
+	fs["NeuralBias2"]		>> neuralBiases2;
 	std::cout << kernels1.size() << std::endl;
 
 	std::cout << "Model Load Completed!!!" << std::endl;
@@ -876,9 +892,16 @@ bool CNNMachine::LoadModel(cv::String fileName)
 
 void CNNMachine::ReleaseVectors()
 {
+	mnistImageLabels.clear();
+	mnistImageMats.clear();
+	trainingMats.clear();
+	validationMats.clear();
+	testMats.clear();
+	validationLabels.clear();
+	testLabels.clear();
+
 	lossAverages.clear();
 
-	trainingMats.clear();
 	trainingConv1x1ZeroPaddingMats.clear(); 
 	kernels1.clear();
 	kernels2.clear(); 
@@ -891,12 +914,16 @@ void CNNMachine::ReleaseVectors()
 	trainingPool1Result.clear();
 	trainingPool2Result.clear();
 	trainingPool1ResultZeroPadding.clear();
+	neuralBiases1.clear();
+	neuralBiases2.clear();
+
 	pool1BackpropFilters.clear();
 	pool2BackpropFilters.clear(); 
 	conv2BackpropFilters.clear();
 	conv1BackpropFilters.clear();
 	yLossW2Relu3W1UpRelu2.clear();
 	yLossW2Relu3W1UpRelu2P1UpRelu.clear();
+
 	predictConv1Mats.clear();
 	predictConv1ZeroPaddingMats.clear();
 	predictConv2Mats.clear();
@@ -905,8 +932,7 @@ void CNNMachine::ReleaseVectors()
 	predictPool1ResultZeroPadding.clear();
 	predictPool2Result.clear();
 
-	neuralW1Mat.release();
-	trainingNeuralX2.release();
+	
 }
 
 bool CNNMachine::KeyEvent(int key)
@@ -939,8 +965,8 @@ bool CNNMachine::KeyEvent(int key)
 		std::cout << conv2ResultBiases[0][1] << std::endl;
 		std::cout << "neuralW1Mat[0][0]" << std::endl;
 		std::cout << neuralW1Mat.at<double>(0, 0) << std::endl;
-		std::cout << "neuralW2[0][0]" << std::endl;
-		std::cout << neuralW2.at<double>(0, 0) << std::endl;
+		std::cout << "neuralW2Mat[0][0]" << std::endl;
+		std::cout << neuralW2Mat.at<double>(0, 0) << std::endl;
 		nowEpoch--;
 		return false;
 		break;
@@ -1100,6 +1126,23 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 
 			}
 			
+			//디버그용 이미지 출력
+			const int printk1Cols = 5;
+			const int printk2Cols = 5;
+			for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+				cv::namedWindow(cv::String("PredictPooled1Image ").append(std::to_string(k1n)), cv::WINDOW_KEEPRATIO);
+				cv::resizeWindow(cv::String("PredictPooled1Image ").append(std::to_string(k1n)), cv::Size(7, 7) * 8);
+				cv::moveWindow(cv::String("PredictPooled1Image ").append(std::to_string(k1n)), k1n * (7 * 12) - (int)(k1n / printk1Cols) * printk1Cols * (7 * 12), 300 + (int)(k1n / printk1Cols) * 75);
+				cv::imshow(cv::String("PredictPooled1Image ").append(std::to_string(k1n)), predictPool1Result[k1n]);
+
+			}
+			for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+				cv::namedWindow(cv::String("PredictPooled2Image ").append(std::to_string(k2n)), cv::WINDOW_KEEPRATIO);
+				cv::resizeWindow(cv::String("PredictPooled2Image ").append(std::to_string(k2n)), cv::Size(7, 7) * 8);
+				cv::moveWindow(cv::String("PredictPooled2Image ").append(std::to_string(k2n)), k2n * (7 * 12) - (int)(k2n / printk2Cols) * printk2Cols * (7 * 12), 450 + (int)(k2n / printk2Cols) * 75);
+				cv::imshow(cv::String("PredictPooled2Image ").append(std::to_string(k2n)), predictPool1Result[k2n]);
+			}
+
 		}
 		predictTickMeter.stop();
 		if (updateFlag) {
@@ -1124,6 +1167,17 @@ void CNNMachine::PaintWindow(cv::InputOutputArray paintMat, cv::String windowNam
 		}
 	}
 	while (cv::waitKeyEx(predictTickMeter.getTimeMilli() + 10) != exitAsciiCode);
+
+	//손글씨 이미지 닫기
+	const int printk1Cols = 5;
+	const int printk2Cols = 5;
+	cv::destroyWindow(windowName);
+	for (int k1n = 0; k1n < kernel1_Num; k1n++) {
+		cv::destroyWindow(cv::String("PredictPooled1Image ").append(std::to_string(k1n)));
+	}
+	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
+		cv::destroyWindow(cv::String("PredictPooled2Image ").append(std::to_string(k2n)));
+	}
 }
 
 //static 변수 초기화 (http://egloos.zum.com/kaludin/v/2461942)
