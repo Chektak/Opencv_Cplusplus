@@ -4,10 +4,13 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 {
 	this->learningRate = learningRate;
 	
-	lossAverages.push_back(0);
 	cv::namedWindow("InputImage", cv::WINDOW_NORMAL);
 	cv::resizeWindow("InputImage", cv::Size(28, 28) * 8);
 	cv::moveWindow("InputImage", 0, 0);
+
+	lossAverages.push_back(0);
+	if (nowEpoch <= 0)
+		nowEpoch = 1;
 	//epoch가 0 이하로 입력되면 무한 반복
 	for (nowEpoch; (epoch <= 0) ? true : nowEpoch <= epoch; nowEpoch++) {
 		std::cout << "----------------------------------------------------------------------------------------------------------------" << std::endl;
@@ -89,16 +92,7 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 		//}
 		//loss /= -trainingYMat.rows;
 
-		//검증 세트 손실
-		//cv::Mat neuralYHatMat = cv::Mat(1, predictPool2Result[0].rows * predictPool2Result[0].cols * predictPool2Result[0].channels(), CV_64FC1);;
-		//for (int y = 0; y < validationYMat.rows; y++) {
-		//	ModelPredict(validationMats[y], neuralYHatMat);
-		//	for (int x = 0; x < validationYMat.cols; x++) {
-		//		//log(0) 음의 무한대 예외처리로 0 대신 0에 가까운 수 사용
-		//		loss += validationYMat.at<double>(y, x) * log((neuralYHatMat.at<double>(0, x) == 0) ? 0.00000000001 : neuralYHatMat.at<double>(0, x));
-		//	}
-		//}
-
+		//검증 세트 손실, 정확도 계산
 		int correct = 0;
 		loss = 0;
 		cv::Mat oneHotEncodedMat;
@@ -131,11 +125,10 @@ void CNNMachine::Training(int epoch, double learningRate, double l2, CNNMachine:
 		//}
 		//loss /= -trainingYMat.rows;
 
-		lossAverages.push_back(lossAverages[nowEpoch - (double)1] + loss / nowEpoch);
+		lossAverages.push_back(lossAverages[nowEpoch - (double)1] + loss);
 		std::cout << "코스트 : " << loss << std::endl;
-		std::cout << "코스트 누적 평균 : " << lossAverages[nowEpoch] << std::endl;
+		std::cout << "코스트 누적 평균 : " << lossAverages[nowEpoch] / nowEpoch << std::endl;
 		std::cout << "정확도(max 100%) : " << correctAnswerRate << " %" << std::endl;
-		std::cout << "정확도(max 100%) : " << correct << " %" << std::endl;
 #pragma endregion
 		trainingTickMeter.stop();
 	}
@@ -192,12 +185,13 @@ void CNNMachine::SplitData(const std::vector<cv::Mat>& mnistImageMats, const std
 #pragma endregion
 }
 
-void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num)
+void CNNMachine::Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int neuralW1Cols_Num, int classification_Num)
 {
 	this->useData_Num = useData_Num;
 	this->kernel1_Num = kernel1_Num;
 	this->kernel2_Num = kernel2_Num;
 	this->classification_Num = classification_Num;
+	this->neuralW1Cols_Num = neuralW1Cols_Num;
 	op->MnistImageMatDataRead("Resources/train-images.idx3-ubyte", mnistImageMats, 0,useData_Num);
 	op->MnistImageLabelDataRead("Resources/train-labels.idx1-ubyte", mnistImageLabels, 0,useData_Num);
 
@@ -574,7 +568,7 @@ void CNNMachine::ForwardPropagationBatch()
 	for (int k2n = 0; k2n < kernel2_Num; k2n++) {
 		cv::namedWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), cv::WINDOW_KEEPRATIO);
 		cv::resizeWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), cv::Size(7, 7) * 8);
-		cv::moveWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), k2n * (7 * 12) - (int)(k2n / printk2Cols) * printk2Cols * (7 * 12), 450 + (int)(k2n / printk2Cols) * 75);
+		cv::moveWindow(cv::String("Pooled2Image").append(std::to_string(k2n)), k2n * (7 * 12) - (int)(k2n / printk2Cols) * printk2Cols * (7 * 12), 300 + (int)(kernel1_Num / printk1Cols) * 75 + (int)(k2n / printk2Cols) * 75);
 		cv::imshow(cv::String("Pooled2Image").append(std::to_string(k2n)), trainingPool2Result[nowEpoch % trainingPool1Result.size()][k2n]);
 	}
 }
@@ -873,7 +867,7 @@ bool CNNMachine::LoadModel(cv::String fileName)
 	fs["Kernel2Stride"]		>> kernel2Stride;
 
 	ReleaseVectors();
-	Init(op, useData_Num, kernel1_Num, kernel2_Num, classification_Num);
+	Init(op, useData_Num, kernel1_Num, kernel2_Num, neuralW1Cols_Num, classification_Num);
 	fs["lossAverages"]		>> lossAverages;
 	fs["Kernels1"]			>> kernels1;
 	fs["Kernels2"]			>> kernels2;

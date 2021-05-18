@@ -100,8 +100,8 @@ public:
 	int useData_Num = 0;
 	int kernel1_Num = 0;
 	int kernel2_Num = 0;
+	int neuralW1Cols_Num = 0; //w1 행렬 열(완전연결신경망 1층 뉴런 수)
 	int classification_Num = CLASSIFICATIONNUM;
-	int neuralW1Cols_Num = 10; //w1 행렬 얄(완전연결신경망 1층 뉴런 수)
 
 	enum class GD { STOCHASTIC, MINI_BATCH, BATCH };
 	GD gradientDescent = GD::BATCH;
@@ -149,7 +149,7 @@ public:
 	
 	void Training(int epoch, double learningRate, double l2, CNNMachine::GD gradientDescent);
 	void SplitData(const std::vector<cv::Mat> &mnistImageMats, const std::vector<uint8_t> &mnistImageLabels, const int& trainingSetRatio, const int& validationSetRatio, const int& testSetRatio);
-	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int classification_Num);
+	void Init(OpencvPractice* op, int useData_Num, int kernel1_Num, int kernel2_Num, int neuralW1Cols_Num, int classification_Num);
 	
 	void ForwardPropagationStochastic(int trainingIndex);
 	void BackPropagationStochastic(int trainingIndex);

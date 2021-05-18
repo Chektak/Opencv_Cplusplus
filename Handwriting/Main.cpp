@@ -53,6 +53,7 @@ int main() {
 	int useDataNum = 0;
 	int kernel1Num = 0;
 	int kernel2Num = 0;
+	int neuralW1Cols_Num = 0;
 	bool loadSucceed = false;
 
 	std::cout << "저장된 모델을 불러오시겠습니까? (Yes : 1, No : 0)" << std::endl;
@@ -66,12 +67,14 @@ int main() {
 	if (!loadModelYesOrNo || !loadSucceed) {
 		std::cout << "사용할 전체 데이터셋 수를 입력해주세요." << std::endl;
 		std::cin >> useDataNum;
-		std::cout << "사용할 커널1 수를 입력해주세요." << std::endl;
+		std::cout << "사용할 합성곱 1층 뉴런 수(커널1 수)를 입력해주세요." << std::endl;
 		std::cin >> kernel1Num;
-		std::cout << "사용할 커널2 수를 입력해주세요." << std::endl;
+		std::cout << "사용할 합성곱 2층 뉴런 수(커널2 수)를 입력해주세요." << std::endl;
 		std::cin >> kernel2Num;
+		std::cout << "사용할 완전연결신경망 1층 뉴런 수를 입력해주세요." << std::endl;
+		std::cin >> neuralW1Cols_Num;
 
-		cnn.Init(&op, useDataNum, kernel1Num, kernel2Num, CLASSIFICATIONNUM);
+		cnn.Init(&op, useDataNum, kernel1Num, kernel2Num, neuralW1Cols_Num, CLASSIFICATIONNUM);
 	}
 	//소수점 15자리까지 출력
 	std::cout << std::fixed;
