@@ -94,7 +94,10 @@ public:
 	std::vector<double> lossAverages;
 	double loss = 0;
 	double correctAnswerRate = 0;
+
 	double learningRate = 0;
+	double dropOutRate = 0;
+
 	int nowEpoch = 0;
 
 	int useData_Num = 0;
@@ -162,6 +165,7 @@ public:
 	
 	//합성곱 입력 크기 행렬을 입력으로 넣으면 가설 행렬을 아웃풋으로 반환
 	void ModelPredict(cv::InputArray _Input, cv::OutputArray _NeuralYHatMatOutput);
+	//void ModelPredict(const std::vector<cv::Mat> _InputMats, cv::OutputArray _NeuralYHatMatOutput);
 
 	bool SaveModel(cv::String fileName);
 	bool LoadModel(cv::String fileName);

@@ -261,7 +261,10 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 	//cv::Mat kernel = _Kernel.getMat();
 	
 	//_Kernel.copyTo(_Output);
-	cv::Mat kOutput = cv::Mat::zeros(kernelMatSize, CV_64FC1);
+	_Output.create(kernelMatSize, CV_64FC1);
+	_Output.setTo(0);
+	
+	cv::Mat kOutput = _Output.getMat();
 
 	//std::cout << "커널 업데이트" << std::endl;
 	//소수점 4자리까지 출력
@@ -297,7 +300,7 @@ void Math::ConvKBackprop(cv::InputArray _Input, cv::InputArray _ConvZeroPadInput
 	}
 	//std::cout << "커널 업데이트 행렬 : \n"<<kOutput << std::endl;
 	//kOutput += _Kernel.getMat();
-	kOutput.copyTo(_Output);
+	//kOutput.copyTo(_Output);
 }
 
 void Math::ConvXBackprop(cv::InputArray _Input, cv::InputArray _Kernel, cv::OutputArray _Output, const std::vector<std::pair<int, int>>& _ConvFilter, const cv::Size& stride)
