@@ -76,14 +76,21 @@ void Math::Convolution(cv::InputArray _Input, cv::OutputArray _Output, const cv:
 	output /= kernel.rows * kernel.cols;
 }
 
-void Math::Relu(cv::InputArray _Input, cv::OutputArray _Output)
+void Math::Relu(cv::InputArray _Input, cv::OutputArray _Output, cv::OutputArray _Filter)
 {
 	_Input.getMat().copyTo(_Output);
+	//_Filter.createSameSize(_Input, CV_64FC1);
+	_Filter.create(_Input.size(), CV_64FC1);
+	_Filter.setTo(1);
+
 	cv::Mat output = _Output.getMat();
+	cv::Mat filter = _Filter.getMat();
 	for (int y = 0; y < output.rows; y++) {
 		for (int x = 0; x < output.cols; x++) {
-			if(output.at<double>(y, x) < 0)
+			if (output.at<double>(y, x) < 0) {
 				output.at<double>(y, x) = 0;
+				filter.at<double>(y, x) = 0;
+			}
 		}
 	}
 }

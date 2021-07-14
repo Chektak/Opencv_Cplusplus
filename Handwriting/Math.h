@@ -12,7 +12,7 @@ namespace Math {
 
 
     //활성화 함수 Relu
-    void Relu(cv::InputArray _Input, cv::OutputArray _Output);
+    void Relu(cv::InputArray _Input, cv::OutputArray _Output, cv::OutputArray _Filter);
     
     void MaxPooling(cv::InputArray _Input, cv::OutputArray _Output, const cv::Size& poolSize, const cv::Size& stride);
     

@@ -56,7 +56,7 @@ public:
 #pragma endregion
 
 #pragma region 역방향 계산에서 사용
-	//역방향 계산시 사용하는 Max풀링 필터(풀링을 입력행렬에 대해 미분)
+	//역방향 계산시 사용하는 Max풀링 필터(풀링 함수를 입력행렬에 대해 미분)
 	//데이터 순서 : 데이터 수, 커널 수, 행렬
 	std::vector<std::vector<cv::Mat>> pool1BackpropFilters;
 	std::vector<std::vector<cv::Mat>> pool2BackpropFilters;
@@ -72,6 +72,13 @@ public:
 	//데이터 순서 : 합성곱 결과행렬 행*열, pair(커널 기준 x 입력 행렬 start index, 커널 기준 x 입력 행렬 end index)
 	std::vector<std::pair<int, int>> conv1BackpropFilters;
 	std::vector<std::pair<int, int>> conv2BackpropFilters;
+
+	//역방향 계산시 사용하는 Relu 필터(정방향에서 Relu함수 입력 행렬에 대해 요소가 0보다 크다면 1, 작다면 0 기록)
+	//데이터 순서 : 데이터 수, 채널 수, 행렬
+	std::vector<std::vector<cv::Mat>> relu1BackpropFilters;
+	std::vector<std::vector<cv::Mat>> relu2BackpropFilters;
+	
+	cv::Mat relu3BackpropFilter;//Relu3 함수 입력 행렬인 완전연결신경망 1층 마스크
 
 	cv::Mat yLoss; //손실함수를 SoftMax 함수 결과에 대해 미분한 값
 	cv::Mat w2T;
